@@ -1,0 +1,123 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreDprRequest;
+use App\Http\Requests\ApproveDprRequest;
+use App\Models\DailyProgressReport;
+use App\Services\DprService;
+use Illuminate\Http\Request;
+
+class DprController extends Controller
+{
+    private $dprService;
+
+    public function __construct(DprService $dprService)
+    {
+        $this->dprService = $dprService;
+    }
+
+    public function index(Request $request)
+    {
+        if ($request->has('project_id')) {
+            $dprs = $this->dprService->getDprsByProject(
+                $request->query('project_id'),
+                $request->query('start_date'),
+                $request->query('end_date')
+            );
+        } else {
+            $dprs = DailyProgressReport::where('user_id', $request->user()->id)
+                ->with(['project', 'photos'])
+                ->orderBy('report_date', 'desc')
+                ->get();
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $dprs
+        ]);
+    }
+
+    public function store(StoreDprRequest $request)
+    {
+        $this->authorize('create', DailyProgressReport::class);
+
+        try {
+            $dpr = $this->dprService->createDpr(
+                $request->user()->id,
+                $request->project_id,
+                $request->work_description,
+                $request->latitude,
+                $request->longitude,
+                $request->photos ?? []
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'DPR submitted successfully',
+                'data' => $dpr
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    public function show($id)
+    {
+        $dpr = DailyProgressReport::with(['project', 'user', 'photos'])->findOrFail($id);
+        $this->authorize('view', $dpr);
+
+        return response()->json([
+            'success' => true,
+            'data' => $dpr
+        ]);
+    }
+
+    public function approve(ApproveDprRequest $request, $id)
+    {
+        $dpr = DailyProgressReport::findOrFail($id);
+        $this->authorize('approve', $dpr);
+
+        try {
+            $dpr = $this->dprService->approveDpr(
+                $id,
+                $request->user()->id,
+                $request->status
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'DPR ' . $request->status . ' successfully',
+                'data' => $dpr
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    public function pending(Request $request)
+    {
+        $projectId = $request->query('project_id');
+        
+        $query = DailyProgressReport::where('status', DailyProgressReport::STATUS_SUBMITTED)
+            ->with(['project', 'user', 'photos']);
+
+        if ($projectId) {
+            $query->where('project_id', $projectId);
+        }
+
+        $dprs = $query->orderBy('report_date', 'desc')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $dprs
+        ]);
+    }
+}

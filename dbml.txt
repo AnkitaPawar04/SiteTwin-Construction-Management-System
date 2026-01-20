@@ -1,0 +1,194 @@
+Table users {
+  id bigint [pk, increment]
+  name varchar
+  phone varchar
+  role varchar  // worker, engineer, manager, owner
+  language varchar
+  is_active boolean
+  created_at timestamp
+}
+
+Table projects {
+  id bigint [pk, increment]
+  name varchar
+  location varchar
+  latitude decimal
+  longitude decimal
+  start_date date
+  end_date date
+  owner_id bigint
+  created_at timestamp
+}
+
+Table project_users {
+  id bigint [pk, increment]
+  project_id bigint
+  user_id bigint
+  created_at timestamp
+}
+
+Table attendance {
+  id bigint [pk, increment]
+  user_id bigint
+  project_id bigint
+  date date
+  check_in timestamp
+  check_out timestamp
+  latitude decimal
+  longitude decimal
+  is_verified boolean
+}
+
+Table tasks {
+  id bigint [pk, increment]
+  project_id bigint
+  assigned_to bigint
+  assigned_by bigint
+  title varchar
+  description text
+  status varchar // pending, in_progress, completed
+  created_at timestamp
+}
+
+Table daily_progress_reports {
+  id bigint [pk, increment]
+  project_id bigint
+  user_id bigint
+  work_description text
+  report_date date
+  latitude decimal
+  longitude decimal
+  status varchar // submitted, approved
+  created_at timestamp
+}
+
+Table dpr_photos {
+  id bigint [pk, increment]
+  dpr_id bigint
+  photo_url varchar
+  created_at timestamp
+}
+
+Table materials {
+  id bigint [pk, increment]
+  name varchar
+  unit varchar
+  gst_percentage decimal
+}
+
+Table material_requests {
+  id bigint [pk, increment]
+  project_id bigint
+  requested_by bigint
+  approved_by bigint
+  status varchar // pending, approved, rejected
+  created_at timestamp
+}
+
+Table material_request_items {
+  id bigint [pk, increment]
+  request_id bigint
+  material_id bigint
+  quantity decimal
+}
+
+Table stock {
+  id bigint [pk, increment]
+  project_id bigint
+  material_id bigint
+  available_quantity decimal
+  updated_at timestamp
+}
+
+Table stock_transactions {
+  id bigint [pk, increment]
+  project_id bigint
+  material_id bigint
+  quantity decimal
+  type varchar // in, out
+  reference_id bigint
+  created_at timestamp
+}
+
+Table invoices {
+  id bigint [pk, increment]
+  project_id bigint
+  invoice_number varchar
+  total_amount decimal
+  gst_amount decimal
+  status varchar // generated, paid
+  created_at timestamp
+}
+
+Table invoice_items {
+  id bigint [pk, increment]
+  invoice_id bigint
+  description varchar
+  amount decimal
+  gst_percentage decimal
+}
+
+Table approvals {
+  id bigint [pk, increment]
+  reference_type varchar // dpr, material_request
+  reference_id bigint
+  approved_by bigint
+  status varchar
+  created_at timestamp
+}
+
+Table notifications {
+  id bigint [pk, increment]
+  user_id bigint
+  message text
+  is_read boolean
+  created_at timestamp
+}
+
+Table offline_sync_logs {
+  id bigint [pk, increment]
+  user_id bigint
+  entity varchar
+  entity_id bigint
+  action varchar
+  synced boolean
+  created_at timestamp
+}
+
+/* Relationships */
+
+Ref: projects.owner_id > users.id
+Ref: project_users.project_id > projects.id
+Ref: project_users.user_id > users.id
+
+Ref: attendance.user_id > users.id
+Ref: attendance.project_id > projects.id
+
+Ref: tasks.project_id > projects.id
+Ref: tasks.assigned_to > users.id
+Ref: tasks.assigned_by > users.id
+
+Ref: daily_progress_reports.project_id > projects.id
+Ref: daily_progress_reports.user_id > users.id
+
+Ref: dpr_photos.dpr_id > daily_progress_reports.id
+
+Ref: material_requests.project_id > projects.id
+Ref: material_requests.requested_by > users.id
+Ref: material_requests.approved_by > users.id
+
+Ref: material_request_items.request_id > material_requests.id
+Ref: material_request_items.material_id > materials.id
+
+Ref: stock.project_id > projects.id
+Ref: stock.material_id > materials.id
+
+Ref: stock_transactions.project_id > projects.id
+Ref: stock_transactions.material_id > materials.id
+
+Ref: invoices.project_id > projects.id
+Ref: invoice_items.invoice_id > invoices.id
+
+Ref: approvals.approved_by > users.id
+Ref: notifications.user_id > users.id
+Ref: offline_sync_logs.user_id > users.id
