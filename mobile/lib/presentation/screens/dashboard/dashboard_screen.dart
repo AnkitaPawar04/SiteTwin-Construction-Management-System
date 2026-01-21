@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/providers/auth_provider.dart';
+import 'package:mobile/providers/providers.dart';
+import 'package:mobile/data/models/dashboard_model.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -12,6 +14,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isLoading = false;
+  DashboardModel? _dashboardData;
 
   @override
   void initState() {
@@ -23,8 +26,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     setState(() => _isLoading = true);
     
     try {
-      // TODO: Load dashboard data from API
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+      final user = ref.read(authStateProvider).value;
+      
+      // Load dashboard data for owner role
+      if (user?.role == 'owner') {
+        final dashboardRepo = ref.read(dashboardRepositoryProvider);
+        final data = await dashboardRepo.getOwnerDashboard();
+        setState(() => _dashboardData = data);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -95,40 +104,76 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Statistics Grid
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    children: [
-                      _StatCard(
-                        title: 'Projects',
-                        value: '0',
-                        icon: Icons.construction,
-                        color: Colors.blue,
-                      ),
-                      _StatCard(
-                        title: 'Active Tasks',
-                        value: '0',
-                        icon: Icons.task_alt,
-                        color: Colors.green,
-                      ),
-                      _StatCard(
-                        title: 'Pending DPRs',
-                        value: '0',
-                        icon: Icons.description,
-                        color: Colors.orange,
-                      ),
-                      _StatCard(
-                        title: 'Team Members',
-                        value: '0',
-                        icon: Icons.people,
-                        color: Colors.purple,
-                      ),
-                    ],
-                  ),
+                  // Statistics Grid - Show owner stats if available
+                  if (user?.role == 'owner' && _dashboardData != null) ...[
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      children: [
+                        _StatCard(
+                          title: 'Projects',
+                          value: '${_dashboardData!.projectsCount}',
+                          icon: Icons.construction,
+                          color: Colors.blue,
+                        ),
+                        _StatCard(
+                          title: 'Invoices',
+                          value: '${_dashboardData!.financialOverview.totalInvoices}',
+                          icon: Icons.receipt_long,
+                          color: Colors.green,
+                        ),
+                        _StatCard(
+                          title: 'Today Attendance',
+                          value: '${_dashboardData!.attendanceSummary.todayAttendance}',
+                          icon: Icons.people,
+                          color: Colors.orange,
+                        ),
+                        _StatCard(
+                          title: 'Total Workers',
+                          value: '${_dashboardData!.attendanceSummary.totalWorkers}',
+                          icon: Icons.person,
+                          color: Colors.purple,
+                        ),
+                      ],
+                    ),
+                  ] else
+                    // Default statistics grid for other roles
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      children: [
+                        _StatCard(
+                          title: 'Projects',
+                          value: '0',
+                          icon: Icons.construction,
+                          color: Colors.blue,
+                        ),
+                        _StatCard(
+                          title: 'Active Tasks',
+                          value: '0',
+                          icon: Icons.task_alt,
+                          color: Colors.green,
+                        ),
+                        _StatCard(
+                          title: 'Pending DPRs',
+                          value: '0',
+                          icon: Icons.description,
+                          color: Colors.orange,
+                        ),
+                        _StatCard(
+                          title: 'Team Members',
+                          value: '0',
+                          icon: Icons.people,
+                          color: Colors.purple,
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
 
                   // Recent Activity

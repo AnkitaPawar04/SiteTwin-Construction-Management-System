@@ -9,6 +9,8 @@ import 'package:mobile/presentation/screens/material_request/material_request_li
 import 'package:mobile/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:mobile/presentation/screens/notifications/notifications_screen.dart';
 import 'package:mobile/presentation/screens/projects/projects_screen.dart';
+import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dart';
+import 'package:mobile/presentation/screens/invoices/invoices_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -255,8 +257,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               title: const Text('Stock & Inventory'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Stock & Inventory - Coming soon')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const StockInventoryScreen(),
+                  ),
                 );
               },
             ),
@@ -268,8 +273,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               title: const Text('GST Invoices'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('GST Invoices - Coming soon')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InvoicesScreen(),
+                  ),
                 );
               },
             ),

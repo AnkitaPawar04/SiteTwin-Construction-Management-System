@@ -23,6 +23,7 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
   bool _isLoading = false;
   
   List<ProjectModel> _projects = [];
+  List<dynamic> _users = [];
 
   @override
   void initState() {
@@ -45,14 +46,30 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
         _projects = projects;
         if (_projects.isNotEmpty) {
           _selectedProjectId = _projects.first.id;
+          _loadProjectUsers(_selectedProjectId!);
         }
       });
-      
-      // TODO: Load users from API
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load data: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadProjectUsers(int projectId) async {
+    try {
+      final dprRepo = ref.read(dprRepositoryProvider);
+      final users = await dprRepo.getProjectUsers(projectId);
+      setState(() {
+        _users = users;
+        _selectedUserId = null; // Reset user selection when project changes
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load users: $e')),
         );
       }
     }
@@ -133,7 +150,7 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int>(
-                        initialValue: _selectedProjectId,
+                        value: _selectedProjectId,
                         decoration: const InputDecoration(
                           labelText: 'Select Project',
                           border: OutlineInputBorder(),
@@ -146,10 +163,31 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
                           );
                         }).toList(),
                         onChanged: (value) {
-                          setState(() => _selectedProjectId = value);
+                          if (value != null) {
+                            setState(() => _selectedProjectId = value);
+                            _loadProjectUsers(value);
+                          }
                         },
                         validator: (value) =>
                             value == null ? 'Please select a project' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<int>(
+                        value: _selectedUserId,
+                        decoration: const InputDecoration(
+                          labelText: 'Assign To (Optional)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.person),
+                        ),
+                        items: _users.map((user) {
+                          return DropdownMenuItem<int>(
+                            value: user['id'] as int,
+                            child: Text('${user['name']} (${user['role']})'),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedUserId = value);
+                        },
                       ),
                     ],
                   ),

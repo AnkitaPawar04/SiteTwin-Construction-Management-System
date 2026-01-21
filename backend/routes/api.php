@@ -25,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Project routes
     Route::apiResource('projects', ProjectController::class);
+    Route::get('/projects/{id}/users', [ProjectController::class, 'getUsers']);
     Route::post('/projects/{id}/assign-user', [ProjectController::class, 'assignUser']);
     Route::delete('/projects/{id}/users/{userId}', [ProjectController::class, 'removeUser']);
 

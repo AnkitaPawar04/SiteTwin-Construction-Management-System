@@ -192,6 +192,17 @@ class DprRepository {
     }
   }
 
+  // Get users for a specific project
+  Future<List<dynamic>> getProjectUsers(int projectId) async {
+    try {
+      final response = await _apiClient.get('${ApiConstants.projects}/$projectId/users');
+      return response.data['data'] as List<dynamic>;
+    } catch (e) {
+      AppLogger.error('Failed to fetch project users', e);
+      rethrow;
+    }
+  }
+
   // Update DPR status (for managers to approve/reject)
   Future<void> updateDprStatus(int dprId, String status, String? remarks) async {
     try {

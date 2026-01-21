@@ -109,6 +109,17 @@ class ProjectController extends Controller
         ]);
     }
 
+    public function getUsers(Request $request, $id)
+    {
+        $project = Project::with('users')->findOrFail($id);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $project->users
+        ]);
+    }
+
     public function removeUser(Request $request, $id, $userId)
     {
         $project = Project::findOrFail($id);

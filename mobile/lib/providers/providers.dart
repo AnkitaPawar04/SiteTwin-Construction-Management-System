@@ -14,6 +14,8 @@ import 'package:mobile/data/repositories/material_request_repository.dart';
 import 'package:mobile/data/repositories/stock_repository.dart';
 import 'package:mobile/data/repositories/invoice_repository.dart';
 import 'package:mobile/data/repositories/notification_repository.dart';
+import 'package:mobile/data/repositories/dashboard_repository.dart';
+import 'package:mobile/data/repositories/offline_sync_repository.dart';
 
 // Core Providers
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
@@ -76,4 +78,12 @@ final invoiceRepositoryProvider = Provider<InvoiceRepository>((ref) {
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   return NotificationRepository(ref.watch(apiClientProvider));
+});
+
+final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
+  return DashboardRepository(ref.watch(apiClientProvider));
+});
+
+final offlineSyncRepositoryProvider = Provider<OfflineSyncRepository>((ref) {
+  return OfflineSyncRepository(ref.watch(apiClientProvider));
 });

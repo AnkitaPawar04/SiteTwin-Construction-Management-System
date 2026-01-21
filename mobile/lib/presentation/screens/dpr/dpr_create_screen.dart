@@ -4,10 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/data/models/project_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
+
+final projectsProvider = FutureProvider.autoDispose<List<ProjectModel>>((ref) async {
+  final repo = ref.watch(dprRepositoryProvider);
+  return await repo.getUserProjects();
+});
 
 class DprCreateScreen extends ConsumerStatefulWidget {
   const DprCreateScreen({super.key});
@@ -22,6 +28,7 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   final List<String> _photoPaths = [];
   final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
+  int? _selectedProjectId;
   
   @override
   void dispose() {
@@ -104,6 +111,16 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   Future<void> _submitDpr() async {
     if (!_formKey.currentState!.validate()) return;
     
+    if (_selectedProjectId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a project'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+    
     if (_photoPaths.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -124,7 +141,7 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
       
       final repo = ref.read(dprRepositoryProvider);
       await repo.submitDpr(
-        projectId: 1, // TODO: Get from selected project
+        projectId: _selectedProjectId!,
         workDescription: _workDescriptionController.text.trim(),
         latitude: position.latitude,
         longitude: position.longitude,
@@ -156,6 +173,8 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   
   @override
   Widget build(BuildContext context) {
+    final projectsAsync = ref.watch(projectsProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('New Daily Progress Report'),
@@ -165,6 +184,68 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
+            // Project Selection
+            projectsAsync.when(
+              data: (projects) {
+                if (projects.isEmpty) {
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text('No projects assigned', style: TextStyle(color: Colors.grey[600])),
+                    ),
+                  );
+                }
+                
+                // Auto-select first project if none selected
+                if (_selectedProjectId == null && projects.isNotEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() => _selectedProjectId = projects.first.id);
+                    }
+                  });
+                }
+                
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: DropdownButtonFormField<int>(
+                      value: _selectedProjectId,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Project *',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: projects.map((project) {
+                        return DropdownMenuItem<int>(
+                          value: project.id,
+                          child: Text(project.name),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedProjectId = value);
+                      },
+                      validator: (value) {
+                        if (value == null) return 'Please select a project';
+                        return null;
+                      },
+                    ),
+                  ),
+                );
+              },
+              loading: () => const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+              error: (error, stack) => Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text('Error loading projects: $error'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
             // Work Description
             Card(
               child: Padding(

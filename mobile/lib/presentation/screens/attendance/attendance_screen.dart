@@ -4,9 +4,15 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/attendance_model.dart';
+import 'package:mobile/data/models/project_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:mobile/providers/auth_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+final projectsProvider = FutureProvider.autoDispose<List<ProjectModel>>((ref) async {
+  final repo = ref.watch(dprRepositoryProvider);
+  return await repo.getUserProjects();
+});
 
 final todayAttendanceProvider = FutureProvider.autoDispose<AttendanceModel?>((ref) async {
   final repo = ref.watch(attendanceRepositoryProvider);
@@ -22,6 +28,7 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _isLoading = false;
+  int? _selectedProjectId;
   
   Future<Position?> _getCurrentLocation() async {
     try {
@@ -72,12 +79,25 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     setState(() => _isLoading = true);
     
     try {
+      if (_selectedProjectId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select a project first'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+      
       final position = await _getCurrentLocation();
       if (position == null) return;
       
       final repo = ref.read(attendanceRepositoryProvider);
       await repo.checkIn(
-        projectId: 1, // TODO: Get from selected project
+        projectId: _selectedProjectId!,
         latitude: position.latitude,
         longitude: position.longitude,
       );
@@ -171,11 +191,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final user = authState.value;
     final canMarkAttendance = user?.role == 'worker' || user?.role == 'engineer';
     final todayAttendanceAsync = ref.watch(todayAttendanceProvider);
+    final projectsAsync = ref.watch(projectsProvider);
     
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(todayAttendanceProvider);
+          ref.invalidate(projectsProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -205,6 +227,66 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              
+              // Project Selection
+              if (canMarkAttendance)
+                projectsAsync.when(
+                  data: (projects) {
+                    if (projects.isEmpty) {
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text('No projects assigned', style: TextStyle(color: Colors.grey[600])),
+                        ),
+                      );
+                    }
+                    
+                    // Auto-select first project if none selected
+                    if (_selectedProjectId == null && projects.isNotEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() => _selectedProjectId = projects.first.id);
+                        }
+                      });
+                    }
+                    
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: DropdownButtonFormField<int>(
+                          value: _selectedProjectId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Project',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: projects.map((project) {
+                            return DropdownMenuItem<int>(
+                              value: project.id,
+                              child: Text(project.name),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() => _selectedProjectId = value);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+                  error: (error, stack) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text('Error loading projects: $error'),
+                    ),
+                  ),
+                ),
+              
+              if (canMarkAttendance) const SizedBox(height: 16),
               
               // Attendance Status Card
               todayAttendanceAsync.when(
