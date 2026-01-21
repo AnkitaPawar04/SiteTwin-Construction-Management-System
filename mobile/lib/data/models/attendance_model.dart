@@ -53,14 +53,14 @@ class AttendanceModel extends HiveObject {
   
   factory AttendanceModel.fromJson(Map<String, dynamic> json) {
     return AttendanceModel(
-      id: json['id'],
-      userId: json['user_id'],
-      projectId: json['project_id'],
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '0'),
+      userId: json['user_id'] is int ? json['user_id'] : int.parse(json['user_id'].toString()),
+      projectId: json['project_id'] is int ? json['project_id'] : int.parse(json['project_id'].toString()),
       date: json['date'],
       checkIn: json['check_in'],
       checkOut: json['check_out'],
-      latitude: json['latitude']?.toDouble() ?? 0.0,
-      longitude: json['longitude']?.toDouble() ?? 0.0,
+      latitude: json['latitude'] is double ? json['latitude'] : double.tryParse(json['latitude']?.toString() ?? '0') ?? 0.0,
+      longitude: json['longitude'] is double ? json['longitude'] : double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
       isVerified: json['is_verified'] ?? false,
       isSynced: true,
     );

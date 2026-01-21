@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/attendance_model.dart';
 import 'package:mobile/providers/providers.dart';
+import 'package:mobile/providers/auth_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 final todayAttendanceProvider = FutureProvider.autoDispose<AttendanceModel?>((ref) async {
@@ -52,6 +53,22 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
   
   Future<void> _handleCheckIn() async {
+    final authState = ref.read(authStateProvider);
+    final user = authState.value;
+    
+    // Only workers and engineers can check in
+    if (user?.role != 'worker' && user?.role != 'engineer') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only Workers and Engineers can mark attendance'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
+    
     setState(() => _isLoading = true);
     
     try {
@@ -90,6 +107,22 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
   
   Future<void> _handleCheckOut() async {
+    final authState = ref.read(authStateProvider);
+    final user = authState.value;
+    
+    // Only workers and engineers can check out
+    if (user?.role != 'worker' && user?.role != 'engineer') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only Workers and Engineers can mark attendance'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
+    
     setState(() => _isLoading = true);
     
     try {
@@ -134,6 +167,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.value;
+    final canMarkAttendance = user?.role == 'worker' || user?.role == 'engineer';
     final todayAttendanceAsync = ref.watch(todayAttendanceProvider);
     
     return Scaffold(
@@ -172,7 +208,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               
               // Attendance Status Card
               todayAttendanceAsync.when(
-                data: (attendance) => _buildAttendanceCard(context, attendance),
+                data: (attendance) => _buildAttendanceCard(context, attendance, canMarkAttendance),
                 loading: () => const Card(
                   child: Padding(
                     padding: EdgeInsets.all(32.0),
@@ -193,7 +229,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     );
   }
   
-  Widget _buildAttendanceCard(BuildContext context, AttendanceModel? attendance) {
+  Widget _buildAttendanceCard(BuildContext context, AttendanceModel? attendance, bool canMarkAttendance) {
     final hasCheckedIn = attendance != null && attendance.checkIn != null;
     final hasCheckedOut = attendance != null && attendance.checkOut != null;
     
@@ -284,13 +320,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _isLoading
+                onPressed: !canMarkAttendance
                     ? null
-                    : hasCheckedOut
+                    : _isLoading
                         ? null
-                        : hasCheckedIn
-                            ? _handleCheckOut
-                            : _handleCheckIn,
+                        : hasCheckedOut
+                            ? null
+                            : hasCheckedIn
+                                ? _handleCheckOut
+                                : _handleCheckIn,
                 icon: _isLoading
                     ? const SizedBox(
                         width: 20,
@@ -299,11 +337,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       )
                     : Icon(hasCheckedIn ? Icons.logout : Icons.login),
                 label: Text(
-                  hasCheckedOut
-                      ? 'Completed'
-                      : hasCheckedIn
-                          ? 'CHECK OUT'
-                          : 'CHECK IN',
+                  !canMarkAttendance
+                      ? 'Attendance not required for your role'
+                      : hasCheckedOut
+                          ? 'Completed'
+                          : hasCheckedIn
+                              ? 'CHECK OUT'
+                              : 'CHECK IN',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/data/models/dpr_model.dart';
 import 'package:mobile/providers/providers.dart';
+import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/presentation/screens/dpr/dpr_create_screen.dart';
+import 'package:mobile/presentation/screens/dpr/dpr_approval_screen.dart';
 
 final myDprsProvider = FutureProvider.autoDispose<List<DprModel>>((ref) async {
   final repo = ref.watch(dprRepositoryProvider);
@@ -16,6 +18,8 @@ class DprListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dprsAsync = ref.watch(myDprsProvider);
+    final authState = ref.watch(authStateProvider);
+    final user = authState.value;
     
     return Scaffold(
       body: RefreshIndicator(
@@ -40,7 +44,21 @@ class DprListScreen extends ConsumerWidget {
             return ListView.builder(
               padding: const EdgeInsets.all(16.0),
               itemCount: dprs.length,
-              itemBuilder: (context, index) => DprCard(dpr: dprs[index]),
+              itemBuilder: (context, index) => DprCard(
+                dpr: dprs[index],
+                onTap: user?.role == 'manager'
+                    ? () async {
+                        final result = await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => DprApprovalScreen(dpr: dprs[index]),
+                          ),
+                        );
+                        if (result == true) {
+                          ref.invalidate(myDprsProvider);
+                        }
+                      }
+                    : null,
+              ),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -61,25 +79,28 @@ class DprListScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const DprCreateScreen(),
-            ),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New DPR'),
-      ),
+      floatingActionButton: user?.role == 'worker' || user?.role == 'engineer'
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const DprCreateScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('New DPR'),
+            )
+          : null,
     );
   }
 }
 
 class DprCard extends StatelessWidget {
   final DprModel dpr;
+  final VoidCallback? onTap;
   
-  const DprCard({super.key, required this.dpr});
+  const DprCard({super.key, required this.dpr, this.onTap});
   
   Color _getStatusColor() {
     switch (dpr.status) {
@@ -117,11 +138,14 @@ class DprCard extends StatelessWidget {
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -219,7 +243,8 @@ class DprCard extends StatelessWidget {
                   ),
               ],
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

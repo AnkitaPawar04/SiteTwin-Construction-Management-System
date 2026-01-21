@@ -53,10 +53,10 @@ class TaskModel extends HiveObject {
   
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     return TaskModel(
-      id: json['id'],
-      projectId: json['project_id'],
-      assignedTo: json['assigned_to'],
-      assignedBy: json['assigned_by'],
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '0'),
+      projectId: json['project_id'] is int ? json['project_id'] : int.parse(json['project_id'].toString()),
+      assignedTo: json['assigned_to'] is int ? json['assigned_to'] : int.parse(json['assigned_to'].toString()),
+      assignedBy: json['assigned_by'] is int ? json['assigned_by'] : int.parse(json['assigned_by'].toString()),
       title: json['title'],
       description: json['description'] ?? '',
       status: json['status'],

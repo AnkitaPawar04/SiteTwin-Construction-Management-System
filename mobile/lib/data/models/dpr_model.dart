@@ -64,13 +64,13 @@ class DprModel extends HiveObject {
     final photoUrls = photos?.map((p) => p['photo_url'] as String).toList() ?? [];
     
     return DprModel(
-      id: json['id'],
-      projectId: json['project_id'],
-      userId: json['user_id'],
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '0'),
+      projectId: json['project_id'] is int ? json['project_id'] : int.parse(json['project_id'].toString()),
+      userId: json['user_id'] is int ? json['user_id'] : int.parse(json['user_id'].toString()),
       workDescription: json['work_description'],
       reportDate: json['report_date'],
-      latitude: json['latitude']?.toDouble() ?? 0.0,
-      longitude: json['longitude']?.toDouble() ?? 0.0,
+      latitude: json['latitude'] is double ? json['latitude'] : double.tryParse(json['latitude']?.toString() ?? '0') ?? 0.0,
+      longitude: json['longitude'] is double ? json['longitude'] : double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
       status: json['status'],
       photoUrls: photoUrls,
       isSynced: true,

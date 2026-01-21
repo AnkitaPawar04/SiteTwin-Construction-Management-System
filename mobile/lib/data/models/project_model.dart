@@ -21,14 +21,14 @@ class ProjectModel {
   
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
     return ProjectModel(
-      id: json['id'],
+      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
       name: json['name'],
       location: json['location'],
-      latitude: json['latitude']?.toDouble() ?? 0.0,
-      longitude: json['longitude']?.toDouble() ?? 0.0,
+      latitude: json['latitude'] is double ? json['latitude'] : double.tryParse(json['latitude']?.toString() ?? '0') ?? 0.0,
+      longitude: json['longitude'] is double ? json['longitude'] : double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
       startDate: json['start_date'],
       endDate: json['end_date'],
-      ownerId: json['owner_id'],
+      ownerId: json['owner_id'] is int ? json['owner_id'] : int.parse(json['owner_id'].toString()),
     );
   }
   

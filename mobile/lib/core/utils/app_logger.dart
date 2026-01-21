@@ -24,6 +24,11 @@ class AppLogger {
   }
   
   static void error(String message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.e(message, error: error, stackTrace: stackTrace);
+    // Log error as part of message to avoid logger library issues
+    if (error != null) {
+      _logger.e('$message: $error', stackTrace: stackTrace);
+    } else {
+      _logger.e(message, stackTrace: stackTrace);
+    }
   }
 }

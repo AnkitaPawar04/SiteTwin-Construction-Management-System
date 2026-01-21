@@ -11,6 +11,9 @@ class MaterialRequestModel {
   final String? projectName;
   final String? requestedByName;
   final List<MaterialRequestItemModel> items;
+  
+  // Alias for createdAt for convenience
+  String get requestDate => createdAt;
 
   MaterialRequestModel({
     required this.id,
@@ -29,9 +32,9 @@ class MaterialRequestModel {
 
   factory MaterialRequestModel.fromJson(Map<String, dynamic> json) {
     return MaterialRequestModel(
-      id: json['id'] as int,
-      projectId: json['project_id'] as int,
-      requestedBy: json['requested_by'] as int,
+      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+      projectId: json['project_id'] is int ? json['project_id'] : int.parse(json['project_id'].toString()),
+      requestedBy: json['requested_by'] is int ? json['requested_by'] : int.parse(json['requested_by'].toString()),
       status: json['status'] as String,
       description: json['description'] as String?,
       approvedBy: json['approved_by'] as String?,
@@ -85,10 +88,10 @@ class MaterialRequestItemModel {
 
   factory MaterialRequestItemModel.fromJson(Map<String, dynamic> json) {
     return MaterialRequestItemModel(
-      id: json['id'] as int,
-      materialRequestId: json['material_request_id'] as int,
-      materialId: json['material_id'] as int,
-      quantity: (json['quantity'] as num).toDouble(),
+      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+      materialRequestId: json['material_request_id'] is int ? json['material_request_id'] : int.parse(json['material_request_id'].toString()),
+      materialId: json['material_id'] is int ? json['material_id'] : int.parse(json['material_id'].toString()),
+      quantity: json['quantity'] is double ? json['quantity'] : double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0,
       materialName: json['material_name'] as String?,
       unit: json['unit'] as String?,
     );
@@ -125,11 +128,11 @@ class MaterialModel {
 
   factory MaterialModel.fromJson(Map<String, dynamic> json) {
     return MaterialModel(
-      id: json['id'] as int,
+      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
       name: json['name'] as String,
       unit: json['unit'] as String,
-      unitPrice: (json['unit_price'] as num).toDouble(),
-      gstRate: (json['gst_rate'] as num).toDouble(),
+      unitPrice: json['unit_price'] is double ? json['unit_price'] : double.tryParse(json['unit_price']?.toString() ?? '0') ?? 0.0,
+      gstRate: json['gst_rate'] is double ? json['gst_rate'] : double.tryParse(json['gst_rate']?.toString() ?? '0') ?? 0.0,
       description: json['description'] as String? ?? '',
     );
   }

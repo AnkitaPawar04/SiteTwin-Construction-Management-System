@@ -5,6 +5,7 @@ import 'package:mobile/data/models/material_request_model.dart';
 import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_create_screen.dart';
+import 'package:mobile/presentation/screens/material_request/material_request_approval_screen.dart';
 
 class MaterialRequestListScreen extends ConsumerStatefulWidget {
   const MaterialRequestListScreen({super.key});
@@ -137,6 +138,22 @@ class _MaterialRequestListScreenState
                       return _MaterialRequestCard(
                         request: request,
                         canApprove: canApprove,
+                        onTap: canApprove
+                            ? () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        MaterialRequestApprovalScreen(
+                                      materialRequest: request,
+                                    ),
+                                  ),
+                                );
+                                if (result == true) {
+                                  _loadRequests();
+                                }
+                              }
+                            : null,
                         onApprove: () => _approveRequest(request.id),
                         onReject: () => _rejectRequest(request.id),
                       );
@@ -166,12 +183,14 @@ class _MaterialRequestListScreenState
 class _MaterialRequestCard extends StatelessWidget {
   final MaterialRequestModel request;
   final bool canApprove;
+  final VoidCallback? onTap;
   final VoidCallback onApprove;
   final VoidCallback onReject;
 
   const _MaterialRequestCard({
     required this.request,
     required this.canApprove,
+    this.onTap,
     required this.onApprove,
     required this.onReject,
   });
@@ -202,11 +221,14 @@ class _MaterialRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               children: [
                 Expanded(
@@ -343,7 +365,8 @@ class _MaterialRequestCard extends StatelessWidget {
                 ],
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );

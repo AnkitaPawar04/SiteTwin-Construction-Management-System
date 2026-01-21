@@ -89,4 +89,37 @@ class TaskRepository {
       }
     }
   }
+
+  // Create and assign task (for managers)
+  Future<TaskModel> createTask({
+    required int projectId,
+    required String title,
+    required String description,
+    int? assignedTo,
+    String priority = 'medium',
+    DateTime? dueDate,
+  }) async {
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.tasks,
+        data: {
+          'project_id': projectId,
+          'title': title,
+          'description': description,
+          if (assignedTo != null) 'assigned_to': assignedTo,
+          'priority': priority,
+          if (dueDate != null) 'due_date': dueDate.toIso8601String().split('T')[0],
+          'status': 'pending',
+        },
+      );
+      
+      final task = TaskModel.fromJson(response.data['data']);
+      await _taskBox.put(task.id, task);
+      AppLogger.info('Task created and assigned successfully');
+      return task;
+    } catch (e) {
+      AppLogger.error('Failed to create task', e);
+      rethrow;
+    }
+  }
 }

@@ -102,4 +102,21 @@ class MaterialRequestRepository {
       rethrow;
     }
   }
+
+  // Update material request status (for managers to approve/reject)
+  Future<void> updateRequestStatus(int requestId, String status, String? remarks) async {
+    try {
+      await _apiClient.patch(
+        '${ApiConstants.materialRequests}/$requestId/status',
+        data: {
+          'status': status,
+          if (remarks != null && remarks.isNotEmpty) 'remarks': remarks,
+        },
+      );
+      AppLogger.info('Material request status updated to $status');
+    } catch (e) {
+      AppLogger.error('Failed to update material request status', e);
+      rethrow;
+    }
+  }
 }

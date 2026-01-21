@@ -191,4 +191,21 @@ class DprRepository {
       rethrow;
     }
   }
+
+  // Update DPR status (for managers to approve/reject)
+  Future<void> updateDprStatus(int dprId, String status, String? remarks) async {
+    try {
+      await _apiClient.patch(
+        '${ApiConstants.dprs}/$dprId/status',
+        data: {
+          'status': status,
+          if (remarks != null && remarks.isNotEmpty) 'remarks': remarks,
+        },
+      );
+      AppLogger.info('DPR status updated to $status');
+    } catch (e) {
+      AppLogger.error('Failed to update DPR status', e);
+      rethrow;
+    }
+  }
 }

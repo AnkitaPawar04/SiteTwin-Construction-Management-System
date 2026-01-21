@@ -60,7 +60,14 @@ class AttendanceRepository {
         return attendance;
       } on DioException catch (e) {
         AppLogger.error('Check-in failed', e);
-        throw Exception(e.response?.data['message'] ?? 'Check-in failed');
+        // Extract validation errors if available
+        final errors = e.response?.data['errors'];
+        final message = e.response?.data['message'] ?? 'Check-in failed';
+        if (errors != null) {
+          final errorMessages = (errors as Map).values.map((e) => e.toString()).join(', ');
+          throw Exception('$message: $errorMessages');
+        }
+        throw Exception(message);
       }
     } else {
       // Offline mode
@@ -144,9 +151,11 @@ class AttendanceRepository {
         final List<dynamic> data = response.data['data']['data'];
         final attendances = data.map((json) => AttendanceModel.fromJson(json)).toList();
         
-        // Update local cache
+        // Update local cache - only if id is not null
         for (var attendance in attendances) {
-          await _attendanceBox.put(attendance.id, attendance);
+          if (attendance.id != null) {
+            await _attendanceBox.put(attendance.id!, attendance);
+          }
         }
         
         return attendances;
