@@ -81,6 +81,49 @@ class DprService
         });
     }
 
+    public function updateDprStatus($dprId, $approverId, $status, $remarks = null)
+    {
+        return DB::transaction(function () use ($dprId, $approverId, $status, $remarks) {
+            $dpr = DailyProgressReport::findOrFail($dprId);
+
+            if ($dpr->status !== DailyProgressReport::STATUS_SUBMITTED) {
+                throw new \Exception('DPR is not in submitted status');
+            }
+
+            $dpr->update(['status' => $status]);
+
+            // Update approval record
+            $approval = Approval::where('reference_type', 'dpr')
+                ->where('reference_id', $dprId)
+                ->first();
+
+            if ($approval) {
+                $approval->update([
+                    'approved_by' => $approverId,
+                    'status' => $status === 'approved' 
+                        ? Approval::STATUS_APPROVED 
+                        : Approval::STATUS_REJECTED,
+                    'remarks' => $remarks,
+                ]);
+            }
+
+            // Send notification to DPR creator
+            $message = "Your DPR for " . $dpr->report_date->format('d M Y') . " has been " . $status;
+            if ($remarks) {
+                $message .= ". Remarks: " . $remarks;
+            }
+
+            Notification::create([
+                'user_id' => $dpr->user_id,
+                'type' => 'approval',
+                'message' => $message,
+                'is_read' => false,
+            ]);
+
+            return $dpr->load('photos');
+        });
+    }
+
     public function getDprsByProject($projectId, $startDate = null, $endDate = null)
     {
         $query = DailyProgressReport::where('project_id', $projectId)

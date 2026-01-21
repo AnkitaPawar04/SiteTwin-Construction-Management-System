@@ -16,6 +16,16 @@ class InvoiceController extends Controller
         $this->invoiceService = $invoiceService;
     }
 
+    public function all(Request $request)
+    {
+        $invoices = $this->invoiceService->getAllInvoices();
+
+        return response()->json([
+            'success' => true,
+            'data' => $invoices
+        ]);
+    }
+
     public function index(Request $request, $projectId)
     {
         $invoices = $this->invoiceService->getInvoicesByProject($projectId);

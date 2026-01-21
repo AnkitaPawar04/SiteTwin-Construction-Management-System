@@ -102,6 +102,37 @@ class DprController extends Controller
         }
     }
 
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:approved,rejected',
+            'remarks' => 'nullable|string|max:500'
+        ]);
+
+        $dpr = DailyProgressReport::findOrFail($id);
+        $this->authorize('approve', $dpr);
+
+        try {
+            $dpr = $this->dprService->updateDprStatus(
+                $id,
+                $request->user()->id,
+                $request->status,
+                $request->remarks
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'DPR ' . $request->status . ' successfully',
+                'data' => $dpr
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
     public function pending(Request $request)
     {
         $projectId = $request->query('project_id');

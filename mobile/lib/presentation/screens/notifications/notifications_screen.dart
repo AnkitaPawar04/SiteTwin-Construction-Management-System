@@ -1,56 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
-import 'package:intl/intl.dart';
+import 'package:mobile/data/models/notification_model.dart';
+import 'package:mobile/providers/providers.dart';
+
+// Providers
+final notificationsProvider = FutureProvider.autoDispose<List<NotificationModel>>((ref) async {
+  final repo = ref.watch(notificationRepositoryProvider);
+  return await repo.getAllNotifications();
+});
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Mock notification data
-    final mockNotifications = [
-      {
-        'id': 1,
-        'title': 'New Task Assigned',
-        'message': 'You have been assigned a new task: Install electrical wiring',
-        'type': 'task',
-        'time': DateTime.now().subtract(const Duration(hours: 2)),
-        'isRead': false,
-      },
-      {
-        'id': 2,
-        'title': 'DPR Approved',
-        'message': 'Your daily progress report for Jan 20 has been approved',
-        'type': 'approval',
-        'time': DateTime.now().subtract(const Duration(hours: 5)),
-        'isRead': false,
-      },
-      {
-        'id': 3,
-        'title': 'Material Request Updated',
-        'message': 'Your material request #MR-025 has been approved by manager',
-        'type': 'material',
-        'time': DateTime.now().subtract(const Duration(days: 1)),
-        'isRead': true,
-      },
-      {
-        'id': 4,
-        'title': 'Attendance Reminder',
-        'message': 'Don\'t forget to mark your check-out for today',
-        'type': 'reminder',
-        'time': DateTime.now().subtract(const Duration(days: 1, hours: 3)),
-        'isRead': true,
-      },
-      {
-        'id': 5,
-        'title': 'Task Completed',
-        'message': 'Worker completed task: Foundation excavation',
-        'type': 'task',
-        'time': DateTime.now().subtract(const Duration(days: 2)),
-        'isRead': true,
-      },
-    ];
+    final notificationsAsync = ref.watch(notificationsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -58,87 +23,156 @@ class NotificationsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.done_all),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Marked all as read')),
-              );
+            onPressed: () async {
+              await ref.read(notificationRepositoryProvider).markAllAsRead();
+              ref.invalidate(notificationsProvider);
             },
-            tooltip: 'Mark all as read',
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(8.0),
-        itemCount: mockNotifications.length,
-        itemBuilder: (context, index) {
-          final notification = mockNotifications[index];
-          final isRead = notification['isRead'] as bool;
-          final time = notification['time'] as DateTime;
-
-          return Card(
-            color: isRead ? null : AppTheme.primaryColor.withValues(alpha: 0.05),
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _getTypeColor(notification['type'] as String)
-                    .withValues(alpha: 0.1),
-                child: Icon(
-                  _getTypeIcon(notification['type'] as String),
-                  color: _getTypeColor(notification['type'] as String),
-                ),
-              ),
-              title: Text(
-                notification['title'] as String,
-                style: TextStyle(
-                  fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: notificationsAsync.when(
+        data: (notifications) {
+          if (notifications.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 4),
-                  Text(notification['message'] as String),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatTime(time),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
+                  Icon(Icons.notifications_none_outlined, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('No notifications'),
                 ],
               ),
-              isThreeLine: true,
-              trailing: !isRead
-                  ? Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                    )
-                  : null,
-              onTap: () {
-                // Mark as read and show details
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(notification['message'] as String),
-                    action: SnackBarAction(
-                      label: 'VIEW',
-                      onPressed: () {},
-                    ),
-                  ),
-                );
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(notificationsProvider);
+            },
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: notifications.length,
+              itemBuilder: (context, index) {
+                final notification = notifications[index];
+                return _buildNotificationCard(context, ref, notification);
               },
             ),
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: $error'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(notificationsProvider),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Color _getTypeColor(String type) {
+  Widget _buildNotificationCard(BuildContext context, WidgetRef ref, NotificationModel notification) {
+    final notifType = notification.type.toLowerCase();
+    final icon = _getNotificationIcon(notifType);
+    final color = _getNotificationColor(notifType);
+    final time = DateTime.parse(notification.createdAt);
+    final timeAgo = _getTimeAgo(time);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: notification.isRead ? null : Colors.blue.withValues(alpha: 0.05),
+      child: InkWell(
+        onTap: () async {
+          if (!notification.isRead) {
+            await ref.read(notificationRepositoryProvider).markAsRead(notification.id);
+            ref.invalidate(notificationsProvider);
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: color.withValues(alpha: 0.1),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            notifType.toUpperCase(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          timeAgo,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      notification.message,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              if (!notification.isRead)
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(left: 8, top: 4),
+                  decoration: const BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getNotificationIcon(String type) {
+    switch (type) {
+      case 'task':
+        return Icons.assignment;
+      case 'approval':
+        return Icons.check_circle;
+      case 'material':
+        return Icons.inventory;
+      case 'reminder':
+        return Icons.alarm;
+      default:
+        return Icons.notifications;
+    }
+  }
+
+  Color _getNotificationColor(String type) {
     switch (type) {
       case 'task':
         return AppTheme.primaryColor;
@@ -153,33 +187,24 @@ class NotificationsScreen extends ConsumerWidget {
     }
   }
 
-  IconData _getTypeIcon(String type) {
-    switch (type) {
-      case 'task':
-        return Icons.task_alt;
-      case 'approval':
-        return Icons.check_circle;
-      case 'material':
-        return Icons.inventory_2;
-      case 'reminder':
-        return Icons.notifications_active;
-      default:
-        return Icons.info;
-    }
-  }
-
-  String _formatTime(DateTime time) {
+  String _getTimeAgo(DateTime time) {
     final now = DateTime.now();
     final difference = now.difference(time);
 
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
+    if (difference.inDays > 365) {
+      final years = (difference.inDays / 365).floor();
+      return '$years year${years > 1 ? 's' : ''} ago';
+    } else if (difference.inDays > 30) {
+      final months = (difference.inDays / 30).floor();
+      return '$months month${months > 1 ? 's' : ''} ago';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
     } else {
-      return DateFormat('dd MMM, hh:mm a').format(time);
+      return 'Just now';
     }
   }
 }

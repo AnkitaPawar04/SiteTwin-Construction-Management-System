@@ -11,6 +11,9 @@ import 'package:mobile/data/repositories/auth_repository.dart';
 import 'package:mobile/data/repositories/dpr_repository.dart';
 import 'package:mobile/data/repositories/task_repository.dart';
 import 'package:mobile/data/repositories/material_request_repository.dart';
+import 'package:mobile/data/repositories/stock_repository.dart';
+import 'package:mobile/data/repositories/invoice_repository.dart';
+import 'package:mobile/data/repositories/notification_repository.dart';
 
 // Core Providers
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
@@ -61,4 +64,16 @@ final dprRepositoryProvider = Provider<DprRepository>((ref) {
 
 final materialRequestRepositoryProvider = Provider<MaterialRequestRepository>((ref) {
   return MaterialRequestRepository(ref.watch(apiClientProvider));
+});
+
+final stockRepositoryProvider = Provider<StockRepository>((ref) {
+  return StockRepository(ref.watch(apiClientProvider));
+});
+
+final invoiceRepositoryProvider = Provider<InvoiceRepository>((ref) {
+  return InvoiceRepository(ref.watch(apiClientProvider));
+});
+
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  return NotificationRepository(ref.watch(apiClientProvider));
 });

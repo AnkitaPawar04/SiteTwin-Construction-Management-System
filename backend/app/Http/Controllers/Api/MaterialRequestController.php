@@ -98,6 +98,37 @@ class MaterialRequestController extends Controller
         }
     }
 
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:approved,rejected',
+            'remarks' => 'nullable|string|max:500'
+        ]);
+
+        $materialRequest = MaterialRequest::findOrFail($id);
+        $this->authorize('approve', $materialRequest);
+
+        try {
+            $materialRequest = $this->materialRequestService->updateRequestStatus(
+                $id,
+                $request->user()->id,
+                $request->status,
+                $request->remarks
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Material request ' . $request->status . ' successfully',
+                'data' => $materialRequest
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
     public function pending(Request $request)
     {
         $projectId = $request->query('project_id');

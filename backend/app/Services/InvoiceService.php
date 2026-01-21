@@ -66,4 +66,11 @@ class InvoiceService
             ->orderBy('created_at', 'desc')
             ->get();
     }
+
+    public function getAllInvoices()
+    {
+        return Invoice::with(['items', 'project'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
 }

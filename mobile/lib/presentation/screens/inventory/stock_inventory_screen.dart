@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/data/models/stock_model.dart';
+import 'package:mobile/data/models/stock_transaction_model.dart';
+import 'package:mobile/providers/providers.dart';
+import 'package:intl/intl.dart';
+
+// Providers
+final stockProvider = FutureProvider.autoDispose<List<StockModel>>((ref) async {
+  final repo = ref.watch(stockRepositoryProvider);
+  return await repo.getAllStock();
+});
+
+final stockTransactionsProvider = FutureProvider.autoDispose<List<StockTransactionModel>>((ref) async {
+  final repo = ref.watch(stockRepositoryProvider);
+  return await repo.getAllTransactions();
+});
 
 class StockInventoryScreen extends ConsumerStatefulWidget {
   const StockInventoryScreen({super.key});
@@ -50,117 +65,180 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
   }
 
   Widget _buildStockList() {
-    // Mock data for demonstration
-    final mockStock = [
-      {'material': 'Cement', 'unit': 'Bags', 'quantity': 150, 'minLevel': 50},
-      {'material': 'Steel Bars', 'unit': 'Tons', 'quantity': 5.5, 'minLevel': 2},
-      {'material': 'Bricks', 'unit': 'Pieces', 'quantity': 25000, 'minLevel': 10000},
-      {'material': 'Sand', 'unit': 'Cu.Ft', 'quantity': 500, 'minLevel': 200},
-    ];
+    final stockAsync = ref.watch(stockProvider);
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: mockStock.length,
-      itemBuilder: (context, index) {
-        final item = mockStock[index];
-        final isLow = (item['quantity'] as num) <= (item['minLevel'] as num);
-        
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: isLow
-                  ? AppTheme.errorColor.withValues(alpha: 0.1)
-                  : AppTheme.successColor.withValues(alpha: 0.1),
-              child: Icon(
-                Icons.inventory_2,
-                color: isLow ? AppTheme.errorColor : AppTheme.successColor,
-              ),
+    return stockAsync.when(
+      data: (stock) {
+        if (stock.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text('No stock available'),
+              ],
             ),
-            title: Text(
-              item['material'] as String,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('Available: ${item['quantity']} ${item['unit']}'),
-            trailing: isLow
-                ? Chip(
-                    label: const Text(
-                      'LOW STOCK',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(stockProvider);
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: stock.length,
+            itemBuilder: (context, index) {
+              final item = stock[index];
+              final isLowStock = item.availableQuantity < 50; // Simple threshold
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: isLowStock ? Colors.orange : AppTheme.primaryColor,
+                    child: Icon(
+                      Icons.inventory,
+                      color: Colors.white,
                     ),
-                    backgroundColor: AppTheme.errorColor,
-                  )
-                : null,
+                  ),
+                  title: Text(
+                    item.materialName ?? 'Material #${item.materialId}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '${item.projectName ?? 'Project #${item.projectId}'}\nUpdated: ${DateFormat('dd MMM yyyy').format(DateTime.parse(item.updatedAt))}',
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${item.availableQuantity}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isLowStock ? Colors.orange : Colors.black,
+                        ),
+                      ),
+                      Text(
+                        item.materialUnit ?? 'units',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         );
       },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Error: $error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(stockProvider),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildTransactionsList() {
-    // Mock data for demonstration
-    final mockTransactions = [
-      {
-        'date': '2026-01-20',
-        'material': 'Cement',
-        'type': 'IN',
-        'quantity': 50,
-        'unit': 'Bags',
-        'reference': 'PO-001'
-      },
-      {
-        'date': '2026-01-19',
-        'material': 'Steel Bars',
-        'type': 'OUT',
-        'quantity': 1.5,
-        'unit': 'Tons',
-        'reference': 'MR-025'
-      },
-      {
-        'date': '2026-01-18',
-        'material': 'Bricks',
-        'type': 'IN',
-        'quantity': 10000,
-        'unit': 'Pieces',
-        'reference': 'PO-002'
-      },
-    ];
+    final transactionsAsync = ref.watch(stockTransactionsProvider);
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: mockTransactions.length,
-      itemBuilder: (context, index) {
-        final txn = mockTransactions[index];
-        final isIn = txn['type'] == 'IN';
+    return transactionsAsync.when(
+      data: (transactions) {
+        if (transactions.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_outlined, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text('No transactions found'),
+              ],
+            ),
+          );
+        }
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: isIn
-                  ? AppTheme.successColor.withValues(alpha: 0.1)
-                  : AppTheme.warningColor.withValues(alpha: 0.1),
-              child: Icon(
-                isIn ? Icons.arrow_downward : Icons.arrow_upward,
-                color: isIn ? AppTheme.successColor : AppTheme.warningColor,
-              ),
-            ),
-            title: Text(
-              txn['material'] as String,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              '${txn['type']}: ${txn['quantity']} ${txn['unit']}\n'
-              'Ref: ${txn['reference']} | ${txn['date']}',
-            ),
-            isThreeLine: true,
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(stockTransactionsProvider);
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: transactions.length,
+            itemBuilder: (context, index) {
+              final transaction = transactions[index];
+              final isIn = transaction.type == 'in';
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: isIn ? Colors.green : Colors.red,
+                    child: Icon(
+                      isIn ? Icons.arrow_downward : Icons.arrow_upward,
+                      color: Colors.white,
+                    ),
+                  ),
+                  title: Text(
+                    transaction.materialName ?? 'Material #${transaction.materialId}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '${transaction.projectName ?? 'Project #${transaction.projectId}'}\n${DateFormat('dd MMM yyyy HH:mm').format(DateTime.parse(transaction.createdAt))}',
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${isIn ? '+' : '-'}${transaction.quantity}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isIn ? Colors.green : Colors.red,
+                        ),
+                      ),
+                      Text(
+                        transaction.materialUnit ?? 'units',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         );
       },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Error: $error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(stockTransactionsProvider),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

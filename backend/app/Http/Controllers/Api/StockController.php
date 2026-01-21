@@ -16,6 +16,26 @@ class StockController extends Controller
         $this->stockService = $stockService;
     }
 
+    public function allStock(Request $request)
+    {
+        $stock = $this->stockService->getAllStock();
+
+        return response()->json([
+            'success' => true,
+            'data' => $stock
+        ]);
+    }
+
+    public function allTransactions(Request $request)
+    {
+        $transactions = $this->stockService->getAllTransactions();
+
+        return response()->json([
+            'success' => true,
+            'data' => $transactions
+        ]);
+    }
+
     public function index(Request $request, $projectId)
     {
         $stock = $this->stockService->getStockByProject($projectId);

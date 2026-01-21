@@ -74,6 +74,21 @@ class StockService
             ->get();
     }
 
+    public function getAllStock()
+    {
+        return Stock::with(['material', 'project'])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+    }
+
+    public function getAllTransactions()
+    {
+        return StockTransaction::with(['material', 'project'])
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get();
+    }
+
     public function getStockTransactions($projectId, $materialId = null)
     {
         $query = StockTransaction::where('project_id', $projectId)

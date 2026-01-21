@@ -2,63 +2,91 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile/data/models/invoice_model.dart';
+import 'package:mobile/providers/providers.dart';
+
+// Providers
+final invoicesProvider = FutureProvider.autoDispose<List<InvoiceModel>>((ref) async {
+  final repo = ref.watch(invoiceRepositoryProvider);
+  return await repo.getAllInvoices();
+});
 
 class InvoicesScreen extends ConsumerWidget {
   const InvoicesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Mock invoice data
-    final mockInvoices = [
-      {
-        'id': 'INV-2026-001',
-        'date': '2026-01-15',
-        'project': 'Skyline Apartments',
-        'amount': 1250000,
-        'gst': 225000,
-        'total': 1475000,
-        'status': 'Paid',
-      },
-      {
-        'id': 'INV-2026-002',
-        'date': '2026-01-10',
-        'project': 'Green Valley Complex',
-        'amount': 850000,
-        'gst': 153000,
-        'total': 1003000,
-        'status': 'Pending',
-      },
-      {
-        'id': 'INV-2025-198',
-        'date': '2025-12-28',
-        'project': 'Metro Plaza',
-        'amount': 2100000,
-        'gst': 378000,
-        'total': 2478000,
-        'status': 'Paid',
-      },
-    ];
+    final invoicesAsync = ref.watch(invoicesProvider);
+
+    return invoicesAsync.when(
+      data: (invoices) => _buildContent(context, ref, invoices),
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('GST Invoices')),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => Scaffold(
+        appBar: AppBar(title: const Text('GST Invoices')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: $error'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(invoicesProvider),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, WidgetRef ref, List<InvoiceModel> invoices) {
+    // Calculate totals
+    final totalRevenue = invoices.fold<double>(
+      0,
+      (sum, invoice) => sum + invoice.totalAmount,
+    );
+    final totalGST = invoices.fold<double>(
+      0,
+      (sum, invoice) => sum + invoice.gstAmount,
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('GST Invoices'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.file_download),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Export feature - Coming soon')),
-              );
-            },
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.invalidate(invoicesProvider),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Summary Card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16.0),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(invoicesProvider);
+        },
+        child: invoices.isEmpty
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey),
+                    SizedBox(height: 16),
+                    Text('No invoices found'),
+                  ],
+                ),
+              )
+            : Column(
+                children: [
+                  // Summary Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16.0),
             margin: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -81,7 +109,7 @@ class InvoicesScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '₹${NumberFormat('#,##,###').format(4956000)}',
+                  '₹${NumberFormat('#,##,###').format(totalRevenue)}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -90,7 +118,7 @@ class InvoicesScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'GST Collected: ₹${NumberFormat('#,##,###').format(756000)}',
+                  'GST Collected: ₹${NumberFormat('#,##,###').format(totalGST)}',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
@@ -104,10 +132,10 @@ class InvoicesScreen extends ConsumerWidget {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              itemCount: mockInvoices.length,
+              itemCount: invoices.length,
               itemBuilder: (context, index) {
-                final invoice = mockInvoices[index];
-                final isPaid = invoice['status'] == 'Paid';
+                final invoice = invoices[index];
+                final isPaid = invoice.status == 'paid';
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -122,18 +150,18 @@ class InvoicesScreen extends ConsumerWidget {
                       ),
                     ),
                     title: Text(
-                      invoice['id'] as String,
+                      invoice.invoiceNumber,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      '${invoice['project']}\n${DateFormat('dd MMM yyyy').format(DateTime.parse(invoice['date'] as String))}',
+                      '${invoice.projectName ?? 'Project #${invoice.projectId}'}\n${DateFormat('dd MMM yyyy').format(DateTime.parse(invoice.createdAt))}',
                     ),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '₹${NumberFormat('#,##,###').format(invoice['total'])}',
+                          '₹${NumberFormat('#,##,###').format(invoice.totalAmount)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -141,7 +169,7 @@ class InvoicesScreen extends ConsumerWidget {
                         ),
                         Chip(
                           label: Text(
-                            invoice['status'] as String,
+                            invoice.status.toUpperCase(),
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.white,
@@ -160,14 +188,14 @@ class InvoicesScreen extends ConsumerWidget {
                         child: Column(
                           children: [
                             _buildRow('Base Amount:',
-                                '₹${NumberFormat('#,##,###').format(invoice['amount'])}'),
+                                '₹${NumberFormat('#,##,###').format(invoice.totalAmount - invoice.gstAmount)}'),
                             const SizedBox(height: 8),
-                            _buildRow('GST (18%):',
-                                '₹${NumberFormat('#,##,###').format(invoice['gst'])}'),
+                            _buildRow('GST:',
+                                '₹${NumberFormat('#,##,###').format(invoice.gstAmount)}'),
                             const Divider(),
                             _buildRow(
                               'Total Amount:',
-                              '₹${NumberFormat('#,##,###').format(invoice['total'])}',
+                              '₹${NumberFormat('#,##,###').format(invoice.totalAmount)}',
                               isBold: true,
                             ),
                             const SizedBox(height: 12),
@@ -212,6 +240,7 @@ class InvoicesScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

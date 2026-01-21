@@ -41,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // DPR routes
     Route::apiResource('dprs', DprController::class)->only(['index', 'store', 'show']);
     Route::post('/dprs/{id}/approve', [DprController::class, 'approve']);
+    Route::patch('/dprs/{id}/status', [DprController::class, 'updateStatus']);
     Route::get('/dprs/pending/all', [DprController::class, 'pending']);
 
     // Material routes
@@ -49,15 +50,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // Material Request routes
     Route::apiResource('material-requests', MaterialRequestController::class)->only(['index', 'store', 'show']);
     Route::post('/material-requests/{id}/approve', [MaterialRequestController::class, 'approve']);
+    Route::patch('/material-requests/{id}/status', [MaterialRequestController::class, 'updateStatus']);
     Route::get('/material-requests/pending/all', [MaterialRequestController::class, 'pending']);
 
     // Stock routes
+    Route::get('/stock', [StockController::class, 'allStock']);
     Route::get('/stock/project/{projectId}', [StockController::class, 'index']);
+    Route::get('/stock-transactions', [StockController::class, 'allTransactions']);
     Route::get('/stock/project/{projectId}/transactions', [StockController::class, 'transactions']);
     Route::post('/stock/add', [StockController::class, 'addStock']);
     Route::post('/stock/remove', [StockController::class, 'removeStock']);
 
     // Invoice routes
+    Route::get('/invoices', [InvoiceController::class, 'all']);
     Route::get('/invoices/project/{projectId}', [InvoiceController::class, 'index']);
     Route::post('/invoices', [InvoiceController::class, 'store']);
     Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
