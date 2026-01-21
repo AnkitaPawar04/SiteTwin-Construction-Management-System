@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\InvoiceService;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class InvoiceController extends Controller
 {
@@ -89,6 +90,62 @@ class InvoiceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Generate and download PDF for an invoice
+     */
+    public function generatePdf($id)
+    {
+        try {
+            $invoice = Invoice::with(['project', 'items'])->findOrFail($id);
+
+            // Create PDF content
+            $html = view('invoices.pdf', compact('invoice'))->render();
+            
+            $pdf = Pdf::loadHTML($html)
+                ->setPaper('a4')
+                ->setOption('margin-top', 10)
+                ->setOption('margin-bottom', 10)
+                ->setOption('margin-left', 10)
+                ->setOption('margin-right', 10);
+
+            $fileName = 'invoice_' . $invoice->id . '_' . now()->format('Y-m-d') . '.pdf';
+
+            return $pdf->download($fileName);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Stream PDF for viewing in browser
+     */
+    public function viewPdf($id)
+    {
+        try {
+            $invoice = Invoice::with(['project', 'items'])->findOrFail($id);
+
+            // Create PDF content
+            $html = view('invoices.pdf', compact('invoice'))->render();
+            
+            $pdf = Pdf::loadHTML($html)
+                ->setPaper('a4')
+                ->setOption('margin-top', 10)
+                ->setOption('margin-bottom', 10)
+                ->setOption('margin-left', 10)
+                ->setOption('margin-right', 10);
+
+            return $pdf->stream();
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to view PDF: ' . $e->getMessage()
             ], 422);
         }
     }

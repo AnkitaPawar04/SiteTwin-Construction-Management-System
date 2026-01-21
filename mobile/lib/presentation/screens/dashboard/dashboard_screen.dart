@@ -27,11 +27,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     
     try {
       final user = ref.read(authStateProvider).value;
+      final dashboardRepo = ref.read(dashboardRepositoryProvider);
       
-      // Load dashboard data for owner role
       if (user?.role == 'owner') {
-        final dashboardRepo = ref.read(dashboardRepositoryProvider);
         final data = await dashboardRepo.getOwnerDashboard();
+        setState(() => _dashboardData = data);
+      } else if (user?.role == 'manager' || user?.role == 'site_incharge') {
+        final data = await dashboardRepo.getManagerDashboard();
+        setState(() => _dashboardData = data);
+      } else if (user?.role == 'worker' || user?.role == 'engineer') {
+        final data = await dashboardRepo.getWorkerDashboard();
         setState(() => _dashboardData = data);
       }
     } catch (e) {

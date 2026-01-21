@@ -4,6 +4,9 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/data/models/invoice_model.dart';
 import 'package:mobile/providers/providers.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 // Providers
 final invoicesProvider = FutureProvider.autoDispose<List<InvoiceModel>>((ref) async {
@@ -203,13 +206,7 @@ class InvoicesScreen extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('View PDF - Coming soon'),
-                                        ),
-                                      );
-                                    },
+                                    onPressed: () => _viewPdf(context, invoice.id),
                                     icon: const Icon(Icons.picture_as_pdf),
                                     label: const Text('View PDF'),
                                   ),
@@ -217,13 +214,7 @@ class InvoicesScreen extends ConsumerWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Download - Coming soon'),
-                                        ),
-                                      );
-                                    },
+                                    onPressed: () => _downloadPdf(context, invoice.id, invoice.invoiceNumber),
                                     icon: const Icon(Icons.download),
                                     label: const Text('Download'),
                                   ),
@@ -264,6 +255,104 @@ class InvoicesScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _viewPdf(BuildContext context, String invoiceId) async {
+    try {
+      // Navigate to PDF viewer screen
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => PdfViewerScreen(invoiceId: invoiceId),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _downloadPdf(BuildContext context, String invoiceId, String invoiceNumber) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Downloading PDF...'),
+              ],
+            ),
+          );
+        },
+      );
+
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.get('/invoices/$invoiceId/pdf');
+
+      // Navigate back
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show success message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF downloaded: $invoiceNumber'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      // Navigate back
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show error
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
+    }
+  }
+}
+
+/// PDF Viewer Screen
+class PdfViewerScreen extends StatelessWidget {
+  final String invoiceId;
+
+  const PdfViewerScreen({
+    Key? key,
+    required this.invoiceId,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Invoice PDF'),
+        elevation: 0,
+      ),
+      body: SfPdfViewer.network(
+        'https://api.yourserver.com/api/invoices/$invoiceId/view-pdf',
+        // Add your API endpoint here
+        onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error loading PDF: ${details.error}'),
+            ),
+          );
+        },
+      ),
     );
   }
 }

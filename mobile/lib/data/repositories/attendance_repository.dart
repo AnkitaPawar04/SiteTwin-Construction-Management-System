@@ -225,4 +225,31 @@ class AttendanceRepository {
       }
     }
   }
+
+  /// Get team attendance summary for a project (for managers)
+  Future<Map<String, dynamic>> getTeamAttendanceSummary(int projectId, {String? date}) async {
+    try {
+      final queryDate = date ?? DateTime.now().toIso8601String().split('T')[0];
+      final response = await _apiClient.get(
+        '/attendance/project/$projectId/team-summary?date=$queryDate',
+      );
+      return response.data['data'] as Map<String, dynamic>;
+    } catch (e) {
+      AppLogger.error('Failed to fetch team attendance summary', e);
+      rethrow;
+    }
+  }
+
+  /// Get attendance trends for a project
+  Future<Map<String, dynamic>> getAttendanceTrends(int projectId, {int days = 30}) async {
+    try {
+      final response = await _apiClient.get(
+        '/attendance/project/$projectId/trends?days=$days',
+      );
+      return response.data['data'] as Map<String, dynamic>;
+    } catch (e) {
+      AppLogger.error('Failed to fetch attendance trends', e);
+      rethrow;
+    }
+  }
 }

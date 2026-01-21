@@ -88,4 +88,52 @@ class AttendanceController extends Controller
             'data' => $attendance
         ]);
     }
+
+    /**
+     * Get team attendance summary for a project
+     * Only accessible by managers/site incharges
+     */
+    public function teamSummary(Request $request, $projectId)
+    {
+        try {
+            // Verify user is assigned to this project as manager
+            $summary = $this->attendanceService->getTeamAttendanceSummary(
+                $projectId,
+                $request->query('date', now()->toDateString())
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => $summary
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Get attendance trends for team
+     */
+    public function attendanceTrends(Request $request, $projectId)
+    {
+        try {
+            $trends = $this->attendanceService->getAttendanceTrends(
+                $projectId,
+                $request->query('days', 30)
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => $trends
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
 }

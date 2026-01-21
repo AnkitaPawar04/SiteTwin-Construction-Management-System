@@ -31,4 +31,64 @@ class DashboardController extends Controller
             'data' => $dashboard
         ]);
     }
+
+    /**
+     * Get dashboard data for manager/site incharge
+     */
+    public function managerDashboard(Request $request)
+    {
+        if (!$request->user()->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access'
+            ], 403);
+        }
+
+        $dashboard = $this->dashboardService->getManagerDashboard($request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $dashboard
+        ]);
+    }
+
+    /**
+     * Get dashboard data for worker/engineer
+     */
+    public function workerDashboard(Request $request)
+    {
+        if (!$request->user()->isWorker()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access'
+            ], 403);
+        }
+
+        $dashboard = $this->dashboardService->getWorkerDashboard($request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $dashboard
+        ]);
+    }
+
+    /**
+     * Get time vs cost analysis dashboard
+     */
+    public function timeVsCost(Request $request)
+    {
+        if (!$request->user()->isOwner()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access'
+            ], 403);
+        }
+
+        $timeVsCostData = $this->dashboardService->getTimeVsCostDashboard($request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $timeVsCostData
+        ]);
+    }
 }

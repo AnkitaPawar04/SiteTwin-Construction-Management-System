@@ -34,6 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/attendance/{id}/check-out', [AttendanceController::class, 'checkOut']);
     Route::get('/attendance/my', [AttendanceController::class, 'myAttendance']);
     Route::get('/attendance/project/{projectId}', [AttendanceController::class, 'projectAttendance']);
+    Route::get('/attendance/project/{projectId}/team-summary', [AttendanceController::class, 'teamSummary']);
+    Route::get('/attendance/project/{projectId}/trends', [AttendanceController::class, 'attendanceTrends']);
 
     // Task routes
     Route::apiResource('tasks', TaskController::class);
@@ -68,9 +70,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/invoices', [InvoiceController::class, 'store']);
     Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
     Route::post('/invoices/{id}/mark-paid', [InvoiceController::class, 'markAsPaid']);
+    Route::get('/invoices/{id}/pdf', [InvoiceController::class, 'generatePdf']);
+    Route::get('/invoices/{id}/view-pdf', [InvoiceController::class, 'viewPdf']);
 
     // Dashboard routes
     Route::get('/dashboard/owner', [DashboardController::class, 'ownerDashboard']);
+    Route::get('/dashboard/manager', [DashboardController::class, 'managerDashboard']);
+    Route::get('/dashboard/worker', [DashboardController::class, 'workerDashboard']);
+    Route::get('/dashboard/time-vs-cost', [DashboardController::class, 'timeVsCost']);
 
     // Notification routes
     Route::get('/notifications', [NotificationController::class, 'index']);
