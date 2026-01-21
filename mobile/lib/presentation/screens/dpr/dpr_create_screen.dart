@@ -209,7 +209,7 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: DropdownButtonFormField<int>(
-                      value: _selectedProjectId,
+                      initialValue: _selectedProjectId,
                       decoration: const InputDecoration(
                         labelText: 'Select Project *',
                         border: OutlineInputBorder(),

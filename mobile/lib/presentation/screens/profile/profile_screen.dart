@@ -29,8 +29,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = ref.read(authStateProvider).value;
     if (user != null) {
       _nameController.text = user.name;
-      _emailController.text = user.email;
-      _phoneController.text = user.phone ?? '';
+      _emailController.text = user.email ?? '';
+      _phoneController.text = user.phone;
     }
   }
 

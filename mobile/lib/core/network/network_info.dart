@@ -4,19 +4,19 @@ class NetworkInfo {
   final Connectivity _connectivity = Connectivity();
   
   Future<bool> get isConnected async {
-    final result = await _connectivity.checkConnectivity();
-    // In connectivity_plus 5.0.2, checkConnectivity returns a single ConnectivityResult
-    return result == ConnectivityResult.mobile ||
-        result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.ethernet;
+    final results = await _connectivity.checkConnectivity();
+    // In connectivity_plus 5.0.2+, checkConnectivity returns List<ConnectivityResult>
+    return results.contains(ConnectivityResult.mobile) ||
+        results.contains(ConnectivityResult.wifi) ||
+        results.contains(ConnectivityResult.ethernet);
   }
   
   Stream<bool> get onConnectivityChanged {
-    return _connectivity.onConnectivityChanged.map((result) {
-      // onConnectivityChanged emits ConnectivityResult
-      return result == ConnectivityResult.mobile ||
-          result == ConnectivityResult.wifi ||
-          result == ConnectivityResult.ethernet;
+    return _connectivity.onConnectivityChanged.map((results) {
+      // onConnectivityChanged emits List<ConnectivityResult>
+      return results.contains(ConnectivityResult.mobile) ||
+          results.contains(ConnectivityResult.wifi) ||
+          results.contains(ConnectivityResult.ethernet);
     });
   }
 }

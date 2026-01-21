@@ -150,7 +150,7 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int>(
-                        value: _selectedProjectId,
+                        initialValue: _selectedProjectId,
                         decoration: const InputDecoration(
                           labelText: 'Select Project',
                           border: OutlineInputBorder(),
@@ -173,7 +173,7 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int>(
-                        value: _selectedUserId,
+                        initialValue: _selectedUserId,
                         decoration: const InputDecoration(
                           labelText: 'Assign To (Optional)',
                           border: OutlineInputBorder(),

@@ -5,8 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:mobile/data/models/invoice_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 // Providers
 final invoicesProvider = FutureProvider.autoDispose<List<InvoiceModel>>((ref) async {
@@ -206,7 +204,7 @@ class InvoicesScreen extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: () => _viewPdf(context, invoice.id),
+                                    onPressed: () => _viewPdf(context, invoice.id.toString()),
                                     icon: const Icon(Icons.picture_as_pdf),
                                     label: const Text('View PDF'),
                                   ),
@@ -214,7 +212,7 @@ class InvoicesScreen extends ConsumerWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: () => _downloadPdf(context, invoice.id, invoice.invoiceNumber),
+                                    onPressed: () => _downloadPdf(context, invoice.id.toString(), invoice.invoiceNumber),
                                     icon: const Icon(Icons.download),
                                     label: const Text('Download'),
                                   ),
@@ -293,8 +291,9 @@ class InvoicesScreen extends ConsumerWidget {
         },
       );
 
-      final apiClient = ref.read(apiClientProvider);
-      final response = await apiClient.get('/invoices/$invoiceId/pdf');
+      // TODO: Implement PDF download using DIO or file_downloader
+      // final apiClient = ref.read(apiClientProvider);
+      // await apiClient.get('/invoices/$invoiceId/pdf');
 
       // Navigate back
       if (context.mounted) {
@@ -331,9 +330,9 @@ class PdfViewerScreen extends StatelessWidget {
   final String invoiceId;
 
   const PdfViewerScreen({
-    Key? key,
+    super.key,
     required this.invoiceId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

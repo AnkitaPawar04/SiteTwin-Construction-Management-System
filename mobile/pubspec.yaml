@@ -34,11 +34,11 @@ dependencies:
     sdk: flutter
 
   # State Management
-  flutter_riverpod: ^2.6.1
+  flutter_riverpod: ^3.2.0
   
   # Network
   dio: ^5.4.0
-  connectivity_plus: ^5.0.2
+  connectivity_plus: ^7.0.0
   
   # Local Storage
   hive: ^2.2.3
@@ -47,8 +47,8 @@ dependencies:
   path_provider: ^2.1.2
   
   # Location
-  geolocator: ^13.0.2
-  permission_handler: ^11.3.0
+  geolocator: ^14.0.2
+  permission_handler: ^12.0.1
   
   # Image Handling
   image_picker: ^1.0.7
@@ -58,15 +58,15 @@ dependencies:
   cupertino_icons: ^1.0.8
   cached_network_image: ^3.3.1
   flutter_svg: ^2.0.10
-  fl_chart: ^0.64.0
-  syncfusion_flutter_pdfviewer: ^26.1.41
+  fl_chart: ^1.1.1
+  syncfusion_flutter_pdfviewer: ^32.1.24
   
   # Utils
   intl: 0.20.2
   logger: ^2.0.2
   uuid: ^4.3.3
-  firebase_messaging: ^14.8.5
-  flutter_secure_storage: ^9.2.2
+  firebase_messaging: ^16.1.1
+  flutter_secure_storage: ^10.0.0
 
 dev_dependencies:
   flutter_test:

@@ -22,6 +22,9 @@ class UserModel extends HiveObject {
   @HiveField(5)
   final bool isActive;
   
+  @HiveField(6)
+  final String? email;
+  
   UserModel({
     required this.id,
     required this.name,
@@ -29,6 +32,7 @@ class UserModel extends HiveObject {
     required this.role,
     required this.language,
     required this.isActive,
+    this.email,
   });
   
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +43,7 @@ class UserModel extends HiveObject {
       role: json['role'],
       language: json['language'] ?? 'en',
       isActive: json['is_active'] ?? true,
+      email: json['email'] as String?,
     );
   }
   
@@ -50,6 +55,7 @@ class UserModel extends HiveObject {
       'role': role,
       'language': language,
       'is_active': isActive,
+      'email': email,
     };
   }
   

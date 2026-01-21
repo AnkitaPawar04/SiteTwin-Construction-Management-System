@@ -27,7 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
     
     try {
-      await ref.read(authStateProvider.notifier).login(_phoneController.text.trim());
+      await ref.read(loginActionProvider(_phoneController.text.trim()).future);
       
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');

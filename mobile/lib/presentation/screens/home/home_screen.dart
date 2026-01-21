@@ -320,7 +320,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
               
               if (confirm == true) {
-                await ref.read(authStateProvider.notifier).logout();
+                await ref.read(logoutActionProvider.future);
                 if (context.mounted) {
                   Navigator.of(context).pushReplacementNamed('/login');
                 }

@@ -223,9 +223,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildLanguageOption(String code, String name) {
     return RadioListTile(
+      // ignore: deprecated_member_use
       title: Text(name),
+      // ignore: deprecated_member_use
       value: code,
+      // ignore: deprecated_member_use
       groupValue: _selectedLanguage,
+      // ignore: deprecated_member_use
       onChanged: (value) {
         Navigator.pop(context);
         _saveLanguage(value!);
