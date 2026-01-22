@@ -14,11 +14,12 @@ final authStateProvider = FutureProvider<UserModel?>((ref) async {
 });
 
 // Login action provider
-final loginActionProvider = FutureProvider.family<void, String>((ref, phone) async {
+final loginActionProvider = FutureProvider.family<UserModel?, String>((ref, phone) async {
   final authRepo = ref.read(authRepositoryProvider);
-  await authRepo.login(phone);
+  final result = await authRepo.login(phone);
   // Invalidate auth state to refresh
   ref.invalidate(authStateProvider);
+  return result['user'] as UserModel?;
 });
 
 // Logout action provider

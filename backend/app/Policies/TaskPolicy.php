@@ -19,13 +19,13 @@ class TaskPolicy
 
     public function create(User $user)
     {
-        return $user->isManager() || $user->isEngineer();
+        return $user->isOwner() || $user->isManager() || $user->isEngineer();
     }
 
     public function update(User $user, Task $task)
     {
-        // Manager/Engineer can update any task in their project
-        if ($user->isManager() || $user->isEngineer()) {
+        // Owner/Manager/Engineer can update any task in their project
+        if ($user->isOwner() || $user->isManager() || $user->isEngineer()) {
             return $user->hasAccessToProject($task->project_id);
         }
         
@@ -35,7 +35,7 @@ class TaskPolicy
 
     public function delete(User $user, Task $task)
     {
-        return ($user->isManager() || $user->isEngineer()) 
+        return ($user->isOwner() || $user->isManager() || $user->isEngineer()) 
             && $user->hasAccessToProject($task->project_id);
     }
 }

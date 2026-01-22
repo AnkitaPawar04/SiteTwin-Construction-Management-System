@@ -231,21 +231,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         // Other Actions
                         SizedBox(
                           width: double.infinity,
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.lock),
-                            label: const Text('Change Password'),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Change password feature coming soon'),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
                           child: ElevatedButton.icon(
                             icon: const Icon(Icons.logout),
                             label: const Text('Logout'),

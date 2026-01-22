@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/core/localization/app_localizations.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/project_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:intl/intl.dart';
+import 'project_map_screen.dart';
+import 'add_project_screen.dart';
+import 'edit_project_screen.dart';
+import 'manage_project_users_screen.dart';
+import 'package:mobile/providers/auth_provider.dart';
 
 final projectsProvider = FutureProvider.autoDispose<List<ProjectModel>>((ref) async {
   final repo = ref.watch(dprRepositoryProvider);
@@ -16,21 +22,29 @@ class ProjectsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectsAsync = ref.watch(projectsProvider);
+    final user = ref.watch(authStateProvider).value;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Projects'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Search - Coming soon')),
-              );
-            },
-          ),
-        ],
+        title: Text(AppLocalizations.of(context).projects),
       ),
+      floatingActionButton: (user?.role == 'owner' || user?.role == 'manager')
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddProjectScreen(),
+                  ),
+                );
+                if (result == true) {
+                  ref.invalidate(projectsProvider);
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: Text(AppLocalizations.of(context).translate('add_project')),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(projectsProvider);
@@ -38,13 +52,13 @@ class ProjectsScreen extends ConsumerWidget {
         child: projectsAsync.when(
           data: (projects) {
             if (projects.isEmpty) {
-              return const Center(
+              return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.business, size: 64, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text('No projects found'),
+                    const Icon(Icons.business, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    Text(AppLocalizations.of(context).translate('no_projects')),
                   ],
                 ),
               );
@@ -65,11 +79,11 @@ class ProjectsScreen extends ConsumerWidget {
               children: [
                 const Icon(Icons.error, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
-                Text('Error: $error'),
+                Text('${AppLocalizations.of(context).error}: $error'),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => ref.invalidate(projectsProvider),
-                  child: const Text('Retry'),
+                  child: Text(AppLocalizations.of(context).retry),
                 ),
               ],
             ),
@@ -80,13 +94,13 @@ class ProjectsScreen extends ConsumerWidget {
   }
 }
 
-class ProjectCard extends StatelessWidget {
+class ProjectCard extends ConsumerWidget {
   final ProjectModel project;
 
   const ProjectCard({super.key, required this.project});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final startDate = DateTime.parse(project.startDate);
     final endDate = DateTime.parse(project.endDate);
     final now = DateTime.now();
@@ -155,14 +169,14 @@ class ProjectCard extends StatelessWidget {
                   Expanded(
                     child: _buildInfoItem(
                       Icons.calendar_today,
-                      'Start',
+                      AppLocalizations.of(context).translate('start'),
                       DateFormat('dd MMM yyyy').format(startDate),
                     ),
                   ),
                   Expanded(
                     child: _buildInfoItem(
                       Icons.event,
-                      'End',
+                      AppLocalizations.of(context).translate('end'),
                       DateFormat('dd MMM yyyy').format(endDate),
                     ),
                   ),
@@ -177,11 +191,70 @@ class ProjectCard extends StatelessWidget {
                   const Icon(Icons.gps_fixed, size: 14, color: Colors.grey),
                   const SizedBox(width: 4),
                   Text(
-                    'Lat: ${project.latitude.toStringAsFixed(4)}, '
-                    'Lng: ${project.longitude.toStringAsFixed(4)}',
+                      '${AppLocalizations.of(context).translate('lat_label')}: ${project.latitude.toStringAsFixed(4)}, '
+                      '${AppLocalizations.of(context).translate('lng_label')}: ${project.longitude.toStringAsFixed(4)}',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProjectMapScreen(project: project),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.map, size: 18),
+                      label: const Text('Map'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditProjectScreen(project: project),
+                          ),
+                        ).then((result) {
+                          if (result == true) {
+                            ref.invalidate(projectsProvider);
+                          }
+                        });
+                      },
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Edit'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showDeleteConfirmation(context, ref, project),
+                      icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                      label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
                     ),
                   ),
                 ],
@@ -226,6 +299,58 @@ class ProjectCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,
     );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref, ProjectModel project) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Project'),
+        content: Text('Are you sure you want to delete "${project.name}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context).cancel),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _deleteProject(context, ref, project.id);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteProject(BuildContext context, WidgetRef ref, int projectId) async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      await apiClient.delete('/projects/$projectId');
+      
+      if (context.mounted) {
+        ref.invalidate(projectsProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Project deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete project: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildInfoItem(IconData icon, String label, String value) {
@@ -279,43 +404,58 @@ class _ProjectDetailsDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildDetailRow(Icons.location_on, 'Location', project.location),
+            _buildDetailRow(Icons.location_on, AppLocalizations.of(context).location, project.location),
             const SizedBox(height: 12),
             _buildDetailRow(
               Icons.calendar_today,
-              'Start Date',
+              AppLocalizations.of(context).translate('start_date'),
               DateFormat('dd MMM yyyy').format(DateTime.parse(project.startDate)),
             ),
             const SizedBox(height: 12),
             _buildDetailRow(
               Icons.event,
-              'End Date',
+              AppLocalizations.of(context).translate('end_date'),
               DateFormat('dd MMM yyyy').format(DateTime.parse(project.endDate)),
             ),
             const SizedBox(height: 12),
             _buildDetailRow(
               Icons.gps_fixed,
-              'Coordinates',
+              AppLocalizations.of(context).translate('coordinates'),
               '${project.latitude.toStringAsFixed(6)}, ${project.longitude.toStringAsFixed(6)}',
             ),
             const SizedBox(height: 24),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('CLOSE'),
+                  child: Text(AppLocalizations.of(context).close.toUpperCase()),
                 ),
-                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('View on map - Coming soon')),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ManageProjectUsersScreen(project: project),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.people),
+                  label: Text(AppLocalizations.of(context).translate('manage_users')),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProjectMapScreen(project: project),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.map),
-                  label: const Text('VIEW ON MAP'),
+                  label: Text(AppLocalizations.of(context).translate('view_on_map').toUpperCase()),
                 ),
               ],
             ),

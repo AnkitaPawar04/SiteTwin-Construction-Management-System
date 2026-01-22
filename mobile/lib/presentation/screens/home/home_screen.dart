@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/core/localization/app_localizations.dart';
 import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/presentation/screens/attendance/attendance_screen.dart';
 import 'package:mobile/presentation/screens/tasks/task_screen.dart';
@@ -13,6 +14,9 @@ import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dar
 import 'package:mobile/presentation/screens/invoices/invoices_screen.dart';
 import 'package:mobile/presentation/screens/analytics/time_vs_cost_screen.dart';
 import 'package:mobile/presentation/widgets/project_switcher.dart';
+import 'package:mobile/presentation/screens/profile/profile_screen.dart';
+import 'package:mobile/presentation/screens/settings/settings_screen.dart';
+import 'package:mobile/presentation/widgets/connection_indicator.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -45,11 +49,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final user = authState.value;
+    final loc = AppLocalizations.of(context);
     
+    // User should not be null when HomeScreen is shown
     if (user == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushReplacementNamed('/login');
-      });
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -59,7 +62,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Text(_getTitle(_currentIndex, user.role)),
+            Text(_getTitle(loc, _currentIndex, user.role)),
             const SizedBox(width: 8),
             const ProjectBadge(),
           ],
@@ -79,31 +82,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       drawer: _buildDrawer(context, user),
-      body: _getScreensForRole(user.role)[_currentIndex],
-      bottomNavigationBar: _buildBottomNavigation(user),
+      body: Column(
+        children: [
+          const ConnectionIndicator(),
+          Expanded(child: _getScreensForRole(user.role)[_currentIndex]),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomNavigation(context, user),
     );
   }
   
-  String _getTitle(int index, String role) {
+  String _getTitle(AppLocalizations loc, int index, String role) {
     if (role == 'worker' || role == 'engineer') {
       switch (index) {
         case 0:
-          return 'Dashboard';
+          return loc.dashboard;
         case 1:
-          return 'Attendance';
+          return loc.attendance;
         case 2:
-          return 'Tasks';
+          return loc.tasks;
         case 3:
-          return 'Daily Progress';
+          return loc.dailyProgress;
         default:
-          return 'Home';
+          return loc.dashboard;
       }
     } else {
-      return 'Dashboard';
+      return loc.dashboard;
     }
   }
   
   Widget _buildDrawer(BuildContext context, dynamic user) {
+    final loc = AppLocalizations.of(context);
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -129,11 +138,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Profile
           ListTile(
             leading: const Icon(Icons.person),
-            title: const Text('Profile'),
+            title: Text(loc.profile),
             onTap: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile screen - Coming soon')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileScreen(),
+                ),
               );
             },
           ),
@@ -145,7 +157,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Dashboard - All roles
           ListTile(
             leading: const Icon(Icons.dashboard),
-            title: const Text('Dashboard'),
+            title: Text(loc.dashboard),
             selected: _currentIndex == 0,
             onTap: () {
               Navigator.pop(context);
@@ -156,7 +168,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Projects - All roles
           ListTile(
             leading: const Icon(Icons.business),
-            title: const Text('Projects'),
+            title: Text(loc.projects),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -172,7 +184,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (user.role == 'worker' || user.role == 'engineer')
             ListTile(
               leading: const Icon(Icons.access_time),
-              title: const Text('Attendance'),
+              title: Text(loc.attendance),
               selected: _currentIndex == 1,
               onTap: () {
                 Navigator.pop(context);
@@ -183,7 +195,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Tasks - All roles can view tasks
           ListTile(
             leading: const Icon(Icons.task_alt),
-            title: const Text('Tasks'),
+            title: Text(loc.tasks),
             selected: _currentIndex == 2 && (user.role == 'worker' || user.role == 'engineer'),
             onTap: () {
               Navigator.pop(context);
@@ -200,11 +212,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
           
-          // Assign Task - Managers only
-          if (user.role == 'manager')
+          // Assign Task - Managers and Owners
+          if (user.role == 'manager' || user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.assignment_turned_in),
-              title: const Text('Assign Task'),
+              title: Text(loc.translate('assign_task')),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -220,7 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (user.role == 'worker' || user.role == 'engineer')
             ListTile(
               leading: const Icon(Icons.description),
-              title: const Text('Daily Progress Reports'),
+              title: Text(loc.dailyProgress),
               selected: _currentIndex == 3,
               onTap: () {
                 Navigator.pop(context);
@@ -228,10 +240,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
           
-          if (user.role == 'manager')
+          if (user.role == 'manager' || user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.description),
-              title: const Text('DPR Approvals'),
+              title: Text(loc.dailyProgress),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -243,11 +255,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
           
-          // Material Requests - Engineers create, Managers approve
-          if (user.role == 'engineer' || user.role == 'manager')
+          // Material Requests - Engineers create, Managers and Owners approve
+          if (user.role == 'engineer' || user.role == 'manager' || user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.inventory_2),
-              title: const Text('Material Requests'),
+              title: Text(loc.materialRequests),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -259,11 +271,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
           
-          // Stock & Inventory - Managers only
-          if (user.role == 'manager')
+          // Stock & Inventory - Managers and Owners
+          if (user.role == 'manager' || user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.warehouse),
-              title: const Text('Stock & Inventory'),
+              title: Text(loc.translate('stock_inventory')),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -279,7 +291,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.receipt_long),
-              title: const Text('GST Invoices'),
+              title: Text(loc.invoices),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -294,7 +306,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.analytics),
-              title: const Text('Time vs Cost Analysis'),
+              title: Text(loc.translate('time_vs_cost')),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -310,11 +322,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Settings
           ListTile(
             leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
+            title: Text(loc.settings),
             onTap: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings - Coming soon')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
               );
             },
           ),
@@ -322,30 +337,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Logout
           ListTile(
             leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
+            title: Text(loc.logout),
             onTap: () async {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Confirm Logout'),
-                  content: const Text('Are you sure you want to logout?'),
+                  title: Text(loc.translate('confirm_logout')),
+                  content: Text(loc.translate('confirm_logout_message')),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
+                      child: Text(loc.cancel),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Logout'),
+                      child: Text(loc.logout),
                     ),
                   ],
                 ),
               );
               
               if (confirm == true) {
-                await ref.read(logoutActionProvider.future);
-                if (context.mounted) {
-                  Navigator.of(context).pushReplacementNamed('/login');
+                if (!context.mounted) return;
+                Navigator.pop(context); // Close drawer first
+                try {
+                  await ref.read(logoutActionProvider.future);
+                  if (!context.mounted) return;
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Logout failed: $e')),
+                  );
                 }
               }
             },
@@ -355,29 +378,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
   
-  Widget? _buildBottomNavigation(dynamic user) {
+  Widget? _buildBottomNavigation(BuildContext context, dynamic user) {
+    final loc = AppLocalizations.of(context);
     // Worker and Engineer get four tabs (Dashboard, Attendance, Tasks, DPR)
     if (user.role == 'worker' || user.role == 'engineer') {
       return BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
-        items: const [
+        items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: loc.dashboard,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.access_time),
-            label: 'Attendance',
+            label: loc.attendance,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.task_alt),
-            label: 'Tasks',
+            label: loc.tasks,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.description),
-            label: 'DPR',
+            label: loc.dpr,
           ),
         ],
       );

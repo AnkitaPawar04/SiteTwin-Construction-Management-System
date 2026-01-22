@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\DprController;
@@ -23,6 +24,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
+    // User routes
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+
     // Project routes
     Route::apiResource('projects', ProjectController::class);
     Route::get('/projects/{id}/users', [ProjectController::class, 'getUsers']);
@@ -37,11 +42,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/attendance/project/{projectId}/team-summary', [AttendanceController::class, 'teamSummary']);
     Route::get('/attendance/project/{projectId}/trends', [AttendanceController::class, 'attendanceTrends']);
 
-    // Task routes
+    // Task routes - custom routes must come before apiResource
+    Route::get('/tasks/my', [TaskController::class, 'index']);
     Route::apiResource('tasks', TaskController::class);
     Route::patch('/tasks/{id}/status', [TaskController::class, 'updateStatus']);
 
-    // DPR routes
+    // DPR routes - custom routes before apiResource to avoid id collision
+    Route::get('/dprs/my', [DprController::class, 'index']);
     Route::apiResource('dprs', DprController::class)->only(['index', 'store', 'show']);
     Route::post('/dprs/{id}/approve', [DprController::class, 'approve']);
     Route::patch('/dprs/{id}/status', [DprController::class, 'updateStatus']);

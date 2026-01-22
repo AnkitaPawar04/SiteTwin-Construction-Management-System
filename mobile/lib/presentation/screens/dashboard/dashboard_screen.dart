@@ -23,6 +23,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _loadDashboardData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     
     try {
@@ -31,12 +32,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       
       if (user?.role == 'owner') {
         final data = await dashboardRepo.getOwnerDashboard();
+        if (!mounted) return;
         setState(() => _dashboardData = data);
       } else if (user?.role == 'manager' || user?.role == 'site_incharge') {
         final data = await dashboardRepo.getManagerDashboard();
+        if (!mounted) return;
         setState(() => _dashboardData = data);
       } else if (user?.role == 'worker' || user?.role == 'engineer') {
         final data = await dashboardRepo.getWorkerDashboard();
+        if (!mounted) return;
         setState(() => _dashboardData = data);
       }
     } catch (e) {
@@ -46,7 +50,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:mobile/core/constants/app_constants.dart';
+import 'package:mobile/core/storage/preferences_service.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/providers/preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -350,13 +353,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement cache clearing
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cache cleared successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              _performCacheClear();
             },
             child: const Text('Clear'),
           ),
@@ -379,18 +376,77 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement data clearing
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('All data cleared'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              _performFullDataClear();
             },
             child: const Text('Clear', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _performCacheClear() async {
+    try {
+      // Clear in-memory image cache
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      // Optionally clear any custom caches here (e.g., API response caches)
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cache cleared successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to clear cache: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _performFullDataClear() async {
+    try {
+      // Clear preferences
+      final prefsService = await PreferencesService.getInstance();
+      await prefsService.clearAll();
+
+      // Clear Hive boxes used by the app
+      await Future.wait([
+        Hive.box(AppConstants.attendanceBox).clear(),
+        Hive.box(AppConstants.taskBox).clear(),
+        Hive.box(AppConstants.dprBox).clear(),
+        if (Hive.isBoxOpen(AppConstants.materialRequestBox))
+          Hive.box(AppConstants.materialRequestBox).clear(),
+        if (Hive.isBoxOpen(AppConstants.syncQueueBox))
+          Hive.box(AppConstants.syncQueueBox).clear(),
+      ]);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All data cleared'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to clear data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

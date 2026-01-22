@@ -20,15 +20,17 @@ class ProjectModel {
   });
   
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
+    final start = json['start_date']?.toString() ?? '';
+    final end = json['end_date']?.toString() ?? '';
     return ProjectModel(
       id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      name: json['name'],
-      location: json['location'],
+      name: json['name']?.toString() ?? '',
+      location: json['location']?.toString() ?? '',
       latitude: json['latitude'] is double ? json['latitude'] : double.tryParse(json['latitude']?.toString() ?? '0') ?? 0.0,
       longitude: json['longitude'] is double ? json['longitude'] : double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
-      startDate: json['start_date'],
-      endDate: json['end_date'],
-      ownerId: json['owner_id'] is int ? json['owner_id'] : int.parse(json['owner_id'].toString()),
+      startDate: start,
+      endDate: end,
+      ownerId: json['owner_id'] is int ? json['owner_id'] : int.tryParse(json['owner_id']?.toString() ?? '0') ?? 0,
     );
   }
   

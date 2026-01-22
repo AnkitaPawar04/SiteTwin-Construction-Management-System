@@ -10,6 +10,7 @@ import 'package:mobile/data/models/attendance_model.dart';
 import 'package:mobile/data/models/task_model.dart';
 import 'package:mobile/data/models/dpr_model.dart';
 import 'package:mobile/providers/auth_provider.dart';
+import 'package:mobile/providers/preferences_provider.dart';
 import 'package:mobile/presentation/screens/auth/login_screen.dart';
 import 'package:mobile/presentation/screens/home/home_screen.dart';
 
@@ -39,9 +40,23 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final languageCode = ref.watch(languageProvider);
+
+    Locale resolveLocale(String code) {
+      switch (code) {
+        case 'hi':
+          return const Locale('hi', 'IN');
+        case 'ta':
+          return const Locale('ta', 'IN');
+        case 'mr':
+          return const Locale('mr', 'IN');
+        default:
+          return const Locale('en', 'US');
+      }
+    }
     
     return MaterialApp(
-      title: 'Construction Manager',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
@@ -53,7 +68,7 @@ class MyApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en', 'US'),
+      locale: resolveLocale(languageCode),
       home: authState.when(
         data: (user) => user != null ? const HomeScreen() : const LoginScreen(),
         loading: () => const Scaffold(

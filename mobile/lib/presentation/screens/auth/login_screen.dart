@@ -27,9 +27,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
     
     try {
-      await ref.read(loginActionProvider(_phoneController.text.trim()).future);
+      final user = await ref.read(loginActionProvider(_phoneController.text.trim()).future);
       
-      if (mounted) {
+      if (!mounted) return;
+      
+      if (user != null) {
+        // Invalidate auth state to force rebuild
+        ref.invalidate(authStateProvider);
+        // Small delay to ensure state updates
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/home');
       }
     } catch (e) {

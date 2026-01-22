@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:hive/hive.dart';
 import 'package:mobile/core/constants/api_constants.dart';
 import 'package:mobile/core/network/api_client.dart';
+import 'package:mobile/core/network/api_error.dart';
 import 'package:mobile/core/network/network_info.dart';
 import 'package:mobile/core/utils/app_logger.dart';
 import 'package:mobile/data/models/task_model.dart';
@@ -56,7 +57,7 @@ class TaskRepository {
         return task;
       } on DioException catch (e) {
         AppLogger.error('Failed to update task status', e);
-        throw Exception(e.response?.data['message'] ?? 'Update failed');
+        throw ApiError.fromDio(e);
       }
     } else {
       // Offline mode

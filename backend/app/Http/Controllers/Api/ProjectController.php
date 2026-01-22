@@ -33,6 +33,12 @@ class ProjectController extends Controller
 
         $project = Project::create($request->validated());
 
+        // Automatically add owner to the project
+        ProjectUser::create([
+            'project_id' => $project->id,
+            'user_id' => $project->owner_id,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Project created successfully',

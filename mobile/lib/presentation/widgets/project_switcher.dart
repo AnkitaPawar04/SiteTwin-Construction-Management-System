@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/data/models/project_model.dart';
+import 'package:mobile/providers/providers.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/providers/preferences_provider.dart';
 
@@ -11,10 +13,67 @@ class ProjectSwitcher extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
       icon: const Icon(Icons.business),
-      onPressed: () {
-        // TODO: Implement project selector when ProjectsRepository is available
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Project selector coming soon')),
+      onPressed: () => _openProjectSelector(context, ref),
+    );
+  }
+
+  Future<void> _openProjectSelector(BuildContext context, WidgetRef ref) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Project'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: FutureBuilder<List<ProjectModel>>(
+              future: ref.read(dprRepositoryProvider).getUserProjects(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text('Failed to load projects: ${snapshot.error}'),
+                  );
+                }
+                final projects = snapshot.data ?? [];
+                if (projects.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('No projects found'),
+                  );
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: projects.length,
+                  itemBuilder: (context, index) {
+                    final project = projects[index];
+                    return ListTile(
+                      leading: const Icon(Icons.business),
+                      title: Text(project.name),
+                      subtitle: Text(project.location),
+                      onTap: () async {
+                        await ref.read(selectedProjectProvider.notifier).selectProject(project.id);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Switched to ${project.name}')),
+                          );
+                        }
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
         );
       },
     );

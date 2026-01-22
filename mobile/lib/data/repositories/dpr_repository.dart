@@ -96,7 +96,17 @@ class DprRepository {
           queryParameters: {'page': page},
         );
         
-        final List<dynamic> data = response.data['data']['data'];
+        // API may return paginated {data: {data: [...]}} or plain list []
+        final dynamic raw = response.data['data'];
+        List<dynamic> data;
+        if (raw is List) {
+          data = raw;
+        } else if (raw is Map && raw['data'] is List) {
+          data = raw['data'] as List;
+        } else {
+          data = [];
+        }
+
         final dprs = data.map((json) => DprModel.fromJson(json)).toList();
         
         // Update local cache
