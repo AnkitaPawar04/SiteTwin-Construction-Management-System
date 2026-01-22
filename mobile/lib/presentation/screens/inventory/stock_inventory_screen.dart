@@ -108,7 +108,7 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    '${item.projectName ?? 'Project #${item.projectId}'}\nUpdated: ${DateFormat('dd MMM yyyy').format(DateTime.parse(item.updatedAt))}',
+                    '${item.projectName ?? 'Project #${item.projectId}'}\nUpdated: ${_formatDate(item.updatedAt)}',
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -197,7 +197,7 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    '${transaction.projectName ?? 'Project #${transaction.projectId}'}\n${DateFormat('dd MMM yyyy HH:mm').format(DateTime.parse(transaction.createdAt))}',
+                    '${transaction.projectName ?? 'Project #${transaction.projectId}'}\n${_formatDateTime(transaction.createdAt)}',
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -240,5 +240,21 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
         ),
       ),
     );
+  }
+
+  String _formatDate(String value) {
+    try {
+      return DateFormat('dd MMM yyyy').format(DateTime.parse(value));
+    } catch (_) {
+      return '-';
+    }
+  }
+
+  String _formatDateTime(String value) {
+    try {
+      return DateFormat('dd MMM yyyy HH:mm').format(DateTime.parse(value));
+    } catch (_) {
+      return '-';
+    }
   }
 }

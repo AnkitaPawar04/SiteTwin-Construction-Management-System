@@ -3,6 +3,7 @@ import 'package:mobile/core/constants/api_constants.dart';
 import 'package:mobile/core/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_constants.dart';
+import 'package:dio/dio.dart' show Options, ResponseType;
 
 class ApiClient {
   late final Dio _dio;
@@ -49,6 +50,19 @@ class ApiClient {
   
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) {
     return _dio.get(path, queryParameters: queryParameters);
+  }
+
+  Future<Response<List<int>>> getBytes(String path, {Map<String, String>? headers}) {
+    return _dio.get<List<int>>(
+      path,
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: {
+          'Accept': 'application/pdf',
+          ...?headers,
+        },
+      ),
+    );
   }
   
   Future<Response> post(String path, {dynamic data}) {

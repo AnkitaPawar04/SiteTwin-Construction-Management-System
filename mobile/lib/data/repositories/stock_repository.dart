@@ -9,26 +9,34 @@ class StockRepository {
 
   Future<List<StockModel>> getAllStock() async {
     final response = await _apiClient.get('/stock');
-    final data = response.data['data'] as List;
-    return data.map((json) => StockModel.fromJson(json)).toList();
+    final body = response.data;
+    final list = body is List ? body : (body['data'] as List? ?? const []);
+    return list.map((json) => StockModel.fromJson(json as Map<String, dynamic>)).toList();
   }
 
   Future<List<StockTransactionModel>> getAllTransactions() async {
     final response = await _apiClient.get('/stock-transactions');
-    final data = response.data['data'] as List;
-    return data.map((json) => StockTransactionModel.fromJson(json)).toList();
+    final body = response.data;
+    final list = body is List ? body : (body['data'] as List? ?? const []);
+    return list
+        .map((json) => StockTransactionModel.fromJson(json as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<StockModel>> getStockByProject(int projectId) async {
     final response = await _apiClient.get('/stock/project/$projectId');
-    final data = response.data['data'] as List;
-    return data.map((json) => StockModel.fromJson(json)).toList();
+    final body = response.data;
+    final list = body is List ? body : (body['data'] as List? ?? const []);
+    return list.map((json) => StockModel.fromJson(json as Map<String, dynamic>)).toList();
   }
 
   Future<List<StockTransactionModel>> getTransactionsByProject(int projectId) async {
     final response = await _apiClient.get('/stock/project/$projectId/transactions');
-    final data = response.data['data'] as List;
-    return data.map((json) => StockTransactionModel.fromJson(json)).toList();
+    final body = response.data;
+    final list = body is List ? body : (body['data'] as List? ?? const []);
+    return list
+        .map((json) => StockTransactionModel.fromJson(json as Map<String, dynamic>))
+        .toList();
   }
 
   Future<StockModel> addStock({

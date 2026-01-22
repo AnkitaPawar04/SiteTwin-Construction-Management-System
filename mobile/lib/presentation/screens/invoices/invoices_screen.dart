@@ -1,9 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile/core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile/core/constants/api_constants.dart';
+import 'package:mobile/core/constants/app_constants.dart';
+import 'package:mobile/core/network/api_client.dart';
+import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/invoice_model.dart';
 import 'package:mobile/providers/providers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 // Providers
@@ -212,7 +219,7 @@ class InvoicesScreen extends ConsumerWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: () => _downloadPdf(context, invoice.id.toString(), invoice.invoiceNumber),
+                                    onPressed: () => _downloadPdf(context, ref, invoice.id.toString(), invoice.invoiceNumber),
                                     icon: const Icon(Icons.download),
                                     label: const Text('Download'),
                                   ),
@@ -271,7 +278,7 @@ class InvoicesScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _downloadPdf(BuildContext context, String invoiceId, String invoiceNumber) async {
+  Future<void> _downloadPdf(BuildContext context, WidgetRef ref, String invoiceId, String invoiceNumber) async {
     try {
       // Show loading dialog
       showDialog(
@@ -291,9 +298,20 @@ class InvoicesScreen extends ConsumerWidget {
         },
       );
 
-      // TODO: Implement PDF download using DIO or file_downloader
-      // final apiClient = ref.read(apiClientProvider);
-      // await apiClient.get('/invoices/$invoiceId/pdf');
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.getBytes(
+        '/invoices/$invoiceId/pdf',
+        headers: {'Content-Type': 'application/pdf'},
+      );
+
+      if (response.data == null || response.data!.isEmpty) {
+        throw Exception('Empty PDF response');
+      }
+
+      final dir = await getTemporaryDirectory();
+      final filePath = '${dir.path}/$invoiceNumber.pdf';
+      final file = File(filePath);
+      await file.writeAsBytes(response.data ?? []);
 
       // Navigate back
       if (context.mounted) {
@@ -341,17 +359,41 @@ class PdfViewerScreen extends StatelessWidget {
         title: const Text('Invoice PDF'),
         elevation: 0,
       ),
-      body: SfPdfViewer.network(
-        'https://api.yourserver.com/api/invoices/$invoiceId/view-pdf',
-        // Add your API endpoint here
-        onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error loading PDF: ${details.error}'),
-            ),
+      body: FutureBuilder<String?>(
+        future: _loadToken(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final token = snapshot.data;
+          if (token == null || token.isEmpty) {
+            return const Center(child: Text('Missing auth token. Please log in again.'));
+          }
+
+          final url = '${ApiConstants.baseUrl}/invoices/$invoiceId/view-pdf';
+
+          return SfPdfViewer.network(
+            url,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/pdf',
+            },
+            onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error loading PDF: ${details.error}'),
+                ),
+              );
+            },
           );
         },
       ),
     );
+  }
+
+  Future<String?> _loadToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(AppConstants.tokenKey);
   }
 }
