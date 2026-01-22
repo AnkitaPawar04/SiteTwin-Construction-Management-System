@@ -12,6 +12,7 @@ import 'package:mobile/presentation/screens/projects/projects_screen.dart';
 import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dart';
 import 'package:mobile/presentation/screens/invoices/invoices_screen.dart';
 import 'package:mobile/presentation/screens/analytics/time_vs_cost_screen.dart';
+import 'package:mobile/presentation/widgets/project_switcher.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -56,8 +57,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getTitle(_currentIndex, user.role)),
+        title: Row(
+          children: [
+            Text(_getTitle(_currentIndex, user.role)),
+            const SizedBox(width: 8),
+            const ProjectBadge(),
+          ],
+        ),
         actions: [
+          const ProjectSwitcher(),
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () {

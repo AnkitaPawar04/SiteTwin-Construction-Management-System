@@ -30,8 +30,25 @@ class AppLocalizations {
     return _localizedValues[locale.languageCode]?[key] ?? key;
   }
 
-  // Convenience getters
+  // Common getters
   String get appName => translate('app_name');
+  String get submit => translate('submit');
+  String get cancel => translate('cancel');
+  String get save => translate('save');
+  String get delete => translate('delete');
+  String get edit => translate('edit');
+  String get approve => translate('approve');
+  String get reject => translate('reject');
+  String get close => translate('close');
+  String get logout => translate('logout');
+  String get login => translate('login');
+  String get success => translate('success');
+  String get error => translate('error');
+  String get loading => translate('loading');
+  String get noData => translate('no_data');
+  String get retry => translate('retry');
+
+  // Navigation
   String get attendance => translate('attendance');
   String get tasks => translate('tasks');
   String get dpr => translate('dpr');
@@ -40,26 +57,28 @@ class AppLocalizations {
   String get dashboard => translate('dashboard');
   String get profile => translate('profile');
   String get settings => translate('settings');
-  String get logout => translate('logout');
-  String get login => translate('login');
-  String get phoneNumber => translate('phone_number');
-  String get enterPhoneNumber => translate('enter_phone_number');
-  String get checkIn => translate('check_in');
-  String get checkOut => translate('check_out');
-  String get submit => translate('submit');
-  String get cancel => translate('cancel');
-  String get save => translate('save');
-  String get delete => translate('delete');
-  String get edit => translate('edit');
-  String get approve => translate('approve');
-  String get reject => translate('reject');
+  String get invoices => translate('invoices');
+  String get projects => translate('projects');
+  String get notifications => translate('notifications');
+
+  // Status
   String get pending => translate('pending');
   String get approved => translate('approved');
   String get rejected => translate('rejected');
   String get completed => translate('completed');
   String get inProgress => translate('in_progress');
-  String get confirmLogout => translate('confirm_logout');
-  String get areYouSureLogout => translate('are_you_sure_logout');
+  String get present => translate('present');
+  String get absent => translate('absent');
+
+  // Common fields
+  String get date => translate('date');
+  String get time => translate('time');
+  String get status => translate('status');
+  String get name => translate('name');
+  String get email => translate('email');
+  String get phoneNumber => translate('phone_number');
+  String get location => translate('location');
+  String get description => translate('description');
 }
 
 // English translations
@@ -73,6 +92,9 @@ const Map<String, String> _en = {
   'dashboard': 'Dashboard',
   'profile': 'Profile',
   'settings': 'Settings',
+  'invoices': 'Invoices',
+  'projects': 'Projects',
+  'notifications': 'Notifications',
   'logout': 'Logout',
   'login': 'Login',
   'phone_number': 'Phone Number',
@@ -91,8 +113,23 @@ const Map<String, String> _en = {
   'rejected': 'Rejected',
   'completed': 'Completed',
   'in_progress': 'In Progress',
-  'confirm_logout': 'Confirm Logout',
-  'are_you_sure_logout': 'Are you sure you want to logout?',
+  'present': 'Present',
+  'absent': 'Absent',
+  'late': 'Late',
+  'on_time': 'On Time',
+  'date': 'Date',
+  'status': 'Status',
+  'time': 'Time',
+  'name': 'Name',
+  'email': 'Email',
+  'location': 'Location',
+  'description': 'Description',
+  'close': 'Close',
+  'success': 'Success',
+  'error': 'Error',
+  'loading': 'Loading...',
+  'no_data': 'No data available',
+  'retry': 'Retry',
 };
 
 // Hindi translations
@@ -106,6 +143,9 @@ const Map<String, String> _hi = {
   'dashboard': 'डैशबोर्ड',
   'profile': 'प्रोफ़ाइल',
   'settings': 'सेटिंग्स',
+  'invoices': 'चालान',
+  'projects': 'परियोजनाएं',
+  'notifications': 'सूचनाएं',
   'logout': 'लॉगआउट',
   'login': 'लॉगिन',
   'phone_number': 'फोन नंबर',
@@ -124,8 +164,23 @@ const Map<String, String> _hi = {
   'rejected': 'अस्वीकृत',
   'completed': 'पूर्ण',
   'in_progress': 'प्रगति में',
-  'confirm_logout': 'लॉगआउट की पुष्टि करें',
-  'are_you_sure_logout': 'क्या आप निश्चित रूप से लॉगआउट करना चाहते हैं?',
+  'present': 'उपस्थित',
+  'absent': 'अनुपस्थित',
+  'late': 'देरी',
+  'on_time': 'समय पर',
+  'date': 'तारीख',
+  'status': 'स्थिति',
+  'time': 'समय',
+  'name': 'नाम',
+  'email': 'ईमेल',
+  'location': 'स्थान',
+  'description': 'विवरण',
+  'close': 'बंद करें',
+  'success': 'सफलता',
+  'error': 'त्रुटि',
+  'loading': 'लोड हो रहा है...',
+  'no_data': 'कोई डेटा उपलब्ध नहीं',
+  'retry': 'पुनः प्रयास करें',
 };
 
 // Tamil translations
@@ -139,6 +194,9 @@ const Map<String, String> _ta = {
   'dashboard': 'கட்டுப்பாட்டு பலகை',
   'profile': 'சுயவிவரம்',
   'settings': 'அமைப்புகள்',
+  'invoices': 'ஏலளை',
+  'projects': 'திட்டங்கள்',
+  'notifications': 'அறிவிப்புகள்',
   'logout': 'வெளியேறு',
   'login': 'உள்நுழைவு',
   'phone_number': 'தொலைபேசி எண்',
@@ -157,8 +215,23 @@ const Map<String, String> _ta = {
   'rejected': 'நிராகரிக்கப்பட்டது',
   'completed': 'முடிந்தது',
   'in_progress': 'முன்னேற்றத்தில்',
-  'confirm_logout': 'வெளியேறுவதை உறுதிப்படுத்தவும்',
-  'are_you_sure_logout': 'நீங்கள் உறுதியாக வெளியேற விரும்புகிறீர்களா?',
+  'present': 'நிகழ்பவர்',
+  'absent': 'இல்லாத',
+  'late': 'தாமதம்',
+  'on_time': 'சரியான நேரத்தில்',
+  'date': 'தேதி',
+  'status': 'நிலை',
+  'time': 'நேரம்',
+  'name': 'பெயர்',
+  'email': 'மின்னஞ்சல்',
+  'location': 'இருப்பிடம்',
+  'description': 'விளக்கம்',
+  'close': 'மூடுக',
+  'success': 'வெற்றி',
+  'error': 'பிழை',
+  'loading': 'ஏற்றம்...',
+  'no_data': 'தகவல் கிடைக்கவில்லை',
+  'retry': 'மீண்டும் முயற்சி செய்க',
 };
 
 // Marathi translations
@@ -172,6 +245,9 @@ const Map<String, String> _mr = {
   'dashboard': 'डॅशबोर्ड',
   'profile': 'प्रोफाइल',
   'settings': 'सेटिंग्ज',
+  'invoices': 'चलने',
+  'projects': 'प्रकल्प',
+  'notifications': 'सूचना',
   'logout': 'लॉगआउट',
   'login': 'लॉगिन',
   'phone_number': 'फोन नंबर',
@@ -190,8 +266,23 @@ const Map<String, String> _mr = {
   'rejected': 'नाकारले',
   'completed': 'पूर्ण',
   'in_progress': 'प्रगतीपथावर',
-  'confirm_logout': 'लॉगआउट पुष्टी करा',
-  'are_you_sure_logout': 'तुम्हाला खात्री आहे की तुम्ही लॉगआउट करू इच्छिता?',
+  'present': 'उपस्थित',
+  'absent': 'अनुपस्थित',
+  'late': 'उशीर',
+  'on_time': 'वेळेत',
+  'date': 'तारीख',
+  'status': 'स्थिती',
+  'time': 'वेळ',
+  'name': 'नाव',
+  'email': 'ईमेल',
+  'location': 'स्थान',
+  'description': 'वर्णन',
+  'close': 'बंद करा',
+  'success': 'यश',
+  'error': 'त्रुटी',
+  'loading': 'लोड हो रहे...',
+  'no_data': 'कोई डेटा उपलब्ध नहीं है',
+  'retry': 'पुन: प्रयास करा',
 };
 
 class _AppLocalizationsDelegate

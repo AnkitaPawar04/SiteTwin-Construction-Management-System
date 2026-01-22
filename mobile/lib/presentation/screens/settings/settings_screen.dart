@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/providers/preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -11,7 +12,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  String _selectedLanguage = 'en';
   bool _notificationsEnabled = true;
   bool _locationEnabled = true;
   bool _darkModeEnabled = false;
@@ -25,7 +25,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _selectedLanguage = prefs.getString('language') ?? 'en';
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
       _locationEnabled = prefs.getBool('location_enabled') ?? true;
       _darkModeEnabled = prefs.getBool('dark_mode') ?? false;
@@ -33,13 +32,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _saveLanguage(String language) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', language);
-    setState(() => _selectedLanguage = language);
+    await ref.read(languageProvider.notifier).setLanguage(language);
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Language updated')),
+        SnackBar(content: Text('Language updated to ${_getLanguageName(language)}')),
       );
     }
   }
@@ -64,6 +61,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedLanguage = ref.watch(languageProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -86,21 +85,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildSectionHeader('Language & Region'),
           ListTile(
             title: const Text('Language'),
-            subtitle: const Text('Select app language'),
+            subtitle: Text('Current: ${_getLanguageName(selectedLanguage)}'),
             leading: const Icon(Icons.language),
             onTap: _showLanguageDialog,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              _getLanguageName(_selectedLanguage),
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
           const Divider(),
 
           // Notifications Section
@@ -204,6 +192,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showLanguageDialog() {
+    final selectedLanguage = ref.read(languageProvider);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -211,24 +201,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildLanguageOption('en', 'English'),
-            _buildLanguageOption('hi', 'हिन्दी (Hindi)'),
-            _buildLanguageOption('ta', 'தமிழ் (Tamil)'),
-            _buildLanguageOption('mr', 'मराठी (Marathi)'),
+            _buildLanguageOption('en', 'English', selectedLanguage),
+            _buildLanguageOption('hi', 'हिन्दी (Hindi)', selectedLanguage),
+            _buildLanguageOption('ta', 'தமிழ் (Tamil)', selectedLanguage),
+            _buildLanguageOption('mr', 'मराठी (Marathi)', selectedLanguage),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLanguageOption(String code, String name) {
-    return RadioListTile(
+  Widget _buildLanguageOption(String code, String name, String currentLanguage) {
+    return RadioListTile<String>(
       // ignore: deprecated_member_use
       title: Text(name),
       // ignore: deprecated_member_use
       value: code,
       // ignore: deprecated_member_use
-      groupValue: _selectedLanguage,
+      groupValue: currentLanguage,
       // ignore: deprecated_member_use
       onChanged: (value) {
         Navigator.pop(context);
