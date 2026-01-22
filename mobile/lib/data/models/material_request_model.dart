@@ -32,23 +32,30 @@ class MaterialRequestModel {
 
   factory MaterialRequestModel.fromJson(Map<String, dynamic> json) {
     return MaterialRequestModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      projectId: json['project_id'] is int ? json['project_id'] : int.parse(json['project_id'].toString()),
-      requestedBy: json['requested_by'] is int ? json['requested_by'] : int.parse(json['requested_by'].toString()),
-      status: json['status'] as String,
-      description: json['description'] as String?,
-      approvedBy: json['approved_by'] as String?,
-      approvedAt: json['approved_at'] as String?,
-      createdAt: json['created_at'] as String,
-      updatedAt: json['updated_at'] as String,
-      projectName: json['project_name'] as String?,
-      requestedByName: json['requested_by_name'] as String?,
+      id: _parseId(json['id']),
+      projectId: _parseId(json['project_id']),
+      requestedBy: _parseId(json['requested_by']),
+      status: json['status']?.toString() ?? 'pending',
+      description: json['description']?.toString(),
+      approvedBy: json['approved_by']?.toString(),
+      approvedAt: json['approved_at']?.toString(),
+      createdAt: json['created_at']?.toString() ?? '',
+      updatedAt: json['updated_at']?.toString() ?? '',
+      projectName: json['project_name']?.toString(),
+      requestedByName: json['requested_by_name']?.toString(),
       items: json['items'] != null
           ? (json['items'] as List)
-              .map((item) => MaterialRequestItemModel.fromJson(item))
+              .map((item) => MaterialRequestItemModel.fromJson(item as Map<String, dynamic>))
               .toList()
           : [],
     );
+  }
+
+  static int _parseId(dynamic value) {
+    if (value is int) return value;
+    if (value == null) return 0;
+    final parsed = int.tryParse(value.toString());
+    return parsed ?? 0;
   }
 
   Map<String, dynamic> toJson() {
@@ -88,13 +95,28 @@ class MaterialRequestItemModel {
 
   factory MaterialRequestItemModel.fromJson(Map<String, dynamic> json) {
     return MaterialRequestItemModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      materialRequestId: json['material_request_id'] is int ? json['material_request_id'] : int.parse(json['material_request_id'].toString()),
-      materialId: json['material_id'] is int ? json['material_id'] : int.parse(json['material_id'].toString()),
-      quantity: json['quantity'] is double ? json['quantity'] : double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0,
-      materialName: json['material_name'] as String?,
-      unit: json['unit'] as String?,
+      id: _parseId(json['id']),
+      materialRequestId: _parseId(json['material_request_id']),
+      materialId: _parseId(json['material_id']),
+      quantity: _parseQuantity(json['quantity']),
+      materialName: json['material_name']?.toString(),
+      unit: json['unit']?.toString(),
     );
+  }
+
+  static int _parseId(dynamic value) {
+    if (value is int) return value;
+    if (value == null) return 0;
+    final parsed = int.tryParse(value.toString());
+    return parsed ?? 0;
+  }
+
+  static double _parseQuantity(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value == null) return 0.0;
+    final parsed = double.tryParse(value.toString());
+    return parsed ?? 0.0;
   }
 
   Map<String, dynamic> toJson() {

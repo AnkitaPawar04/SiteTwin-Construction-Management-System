@@ -102,7 +102,8 @@ class MaterialRequestController extends Controller
     {
         $request->validate([
             'status' => 'required|in:approved,rejected',
-            'remarks' => 'nullable|string|max:500'
+            'remarks' => 'nullable|string|max:500',
+            'allocated_items' => 'nullable|array'
         ]);
 
         $materialRequest = MaterialRequest::findOrFail($id);
@@ -113,7 +114,8 @@ class MaterialRequestController extends Controller
                 $id,
                 $request->user()->id,
                 $request->status,
-                $request->remarks
+                $request->remarks,
+                $request->allocated_items ?? []
             );
 
             return response()->json([

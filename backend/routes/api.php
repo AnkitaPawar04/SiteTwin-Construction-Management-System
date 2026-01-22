@@ -58,10 +58,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('materials', MaterialController::class);
 
     // Material Request routes
+    Route::get('/material-requests/my', [MaterialRequestController::class, 'index']);
+    Route::get('/material-requests/pending', [MaterialRequestController::class, 'pending']);
+    Route::get('/material-requests/pending/all', [MaterialRequestController::class, 'pending']);
     Route::apiResource('material-requests', MaterialRequestController::class)->only(['index', 'store', 'show']);
     Route::post('/material-requests/{id}/approve', [MaterialRequestController::class, 'approve']);
     Route::patch('/material-requests/{id}/status', [MaterialRequestController::class, 'updateStatus']);
-    Route::get('/material-requests/pending/all', [MaterialRequestController::class, 'pending']);
 
     // Stock routes
     Route::get('/stock', [StockController::class, 'allStock']);

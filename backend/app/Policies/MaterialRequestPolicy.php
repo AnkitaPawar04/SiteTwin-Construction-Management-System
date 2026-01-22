@@ -19,7 +19,7 @@ class MaterialRequestPolicy
 
     public function create(User $user)
     {
-        return $user->isEngineer() || $user->isManager();
+        return $user->isEngineer() || $user->isManager() || $user->isOwner();
     }
 
     public function update(User $user, MaterialRequest $request)
@@ -30,6 +30,6 @@ class MaterialRequestPolicy
 
     public function approve(User $user, MaterialRequest $request)
     {
-        return $user->isManager() && $user->hasAccessToProject($request->project_id);
+        return ($user->isManager() || $user->isOwner()) && $user->hasAccessToProject($request->project_id);
     }
 }

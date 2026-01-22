@@ -103,15 +103,33 @@ class MaterialRequestRepository {
     }
   }
 
-  // Update material request status (for managers to approve/reject)
-  Future<void> updateRequestStatus(int requestId, String status, String? remarks) async {
+  // Update material request status (for managers to approve/reject with allocated quantities)
+  Future<void> updateRequestStatus(
+    int requestId,
+    String status,
+    String? remarks, {
+    Map<int, double>? allocatedItems,
+  }) async {
     try {
+      final requestData = <String, dynamic>{
+        'status': status,
+        if (remarks != null && remarks.isNotEmpty) 'remarks': remarks,
+      };
+
+      // Convert allocated_items map to JSON-encodable format
+      if (allocatedItems != null && allocatedItems.isNotEmpty) {
+        final jsonAllocatedItems = <String, dynamic>{};
+        allocatedItems.forEach((itemId, qty) {
+          // Ensure quantity is a proper number type
+          final doubleQty = qty.toDouble();
+          jsonAllocatedItems[itemId.toString()] = doubleQty;
+        });
+        requestData['allocated_items'] = jsonAllocatedItems;
+      }
+
       await _apiClient.patch(
         '${ApiConstants.materialRequests}/$requestId/status',
-        data: {
-          'status': status,
-          if (remarks != null && remarks.isNotEmpty) 'remarks': remarks,
-        },
+        data: requestData,
       );
       AppLogger.info('Material request status updated to $status');
     } catch (e) {

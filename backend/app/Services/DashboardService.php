@@ -116,9 +116,14 @@ class DashboardService
             ->where('date', $today)
             ->get();
 
+        $totalWorkers = DB::table('project_users')
+            ->whereIn('project_id', $projectIds)
+            ->distinct('user_id')
+            ->count();
+
         return [
             'projects_count' => count($projects),
-            'projects_assigned' => collect($projects)->map(function ($project) {
+            'projects' => collect($projects)->map(function ($project) {
                 return [
                     'id' => $project->id,
                     'name' => $project->name,
@@ -127,32 +132,19 @@ class DashboardService
                     'end_date' => $project->end_date,
                     'progress' => $this->calculateProjectProgress($project->id),
                 ];
-            }),
-            'today_attendance' => [
-                'present_count' => $todayAttendance->where('status', 'present')->count(),
-                'absent_count' => $todayAttendance->where('status', 'absent')->count(),
-                'total_workers' => DB::table('project_users')
-                    ->whereIn('project_id', $projectIds)
-                    ->distinct('user_id')
-                    ->count(),
+            })->toArray(),
+            'financial_overview' => [
+                'total_invoices' => Invoice::whereIn('project_id', $projectIds)->count(),
+                'total_amount' => Invoice::whereIn('project_id', $projectIds)->sum('total_amount') ?? 0,
+                'total_gst' => Invoice::whereIn('project_id', $projectIds)->sum('total_gst') ?? 0,
+                'paid_amount' => Invoice::whereIn('project_id', $projectIds)->where('status', 'paid')->sum('total_amount') ?? 0,
+                'pending_amount' => Invoice::whereIn('project_id', $projectIds)->where('status', 'pending')->sum('total_amount') ?? 0,
             ],
-            'pending_tasks' => [
-                'total' => Task::whereIn('project_id', $projectIds)
-                    ->whereIn('status', ['pending', 'in_progress'])
-                    ->count(),
-                'by_project' => Task::whereIn('project_id', $projectIds)
-                    ->whereIn('status', ['pending', 'in_progress'])
-                    ->with('project')
-                    ->get()
-                    ->groupBy('project_id')
-                    ->map(function ($tasks) {
-                        return $tasks->count();
-                    }),
+            'attendance_summary' => [
+                'today_attendance' => $todayAttendance->where('status', 'present')->count(),
+                'total_workers' => $totalWorkers,
             ],
-            'pending_dprs' => DailyProgressReport::whereIn('project_id', $projectIds)
-                ->where('status', 'pending')
-                ->count(),
-            'material_stock_summary' => $this->getMaterialConsumption($projectIds),
+            'material_consumption' => $this->getMaterialConsumption($projectIds),
         ];
     }
 
@@ -189,48 +181,28 @@ class DashboardService
 
         return [
             'projects_count' => count($projects),
-            'assigned_projects' => collect($projects)->map(function ($project) {
+            'projects' => collect($projects)->map(function ($project) {
                 return [
                     'id' => $project->id,
                     'name' => $project->name,
                     'location' => $project->location,
+                    'start_date' => $project->start_date,
+                    'end_date' => $project->end_date,
+                    'progress' => 0,
                 ];
-            }),
-            'today_status' => [
-                'checked_in' => $todayAttendance ? ($todayAttendance->check_in_time !== null) : false,
-                'checked_out' => $todayAttendance ? ($todayAttendance->check_out_time !== null) : false,
-                'status' => $todayAttendance->status ?? 'not_marked',
+            })->toArray(),
+            'financial_overview' => [
+                'total_invoices' => 0,
+                'total_amount' => 0,
+                'total_gst' => 0,
+                'paid_amount' => 0,
+                'pending_amount' => 0,
             ],
-            'assigned_tasks' => [
-                'total' => $assignedTasks->count(),
-                'completed' => $assignedTasks->where('status', 'completed')->count(),
-                'pending' => $assignedTasks->where('status', 'pending')->count(),
-                'in_progress' => $assignedTasks->where('status', 'in_progress')->count(),
-                'recent_tasks' => $assignedTasks->sortByDesc('created_at')
-                    ->take(5)
-                    ->map(function ($task) {
-                        return [
-                            'id' => $task->id,
-                            'title' => $task->title,
-                            'description' => $task->description,
-                            'status' => $task->status,
-                            'due_date' => $task->due_date,
-                        ];
-                    }),
+            'attendance_summary' => [
+                'today_attendance' => $todayAttendance ? 1 : 0,
+                'total_workers' => 1,
             ],
-            'attendance_history' => $attendanceHistory->map(function ($attendance) {
-                return [
-                    'date' => $attendance->date,
-                    'status' => $attendance->status,
-                    'check_in_time' => $attendance->check_in_time,
-                    'check_out_time' => $attendance->check_out_time,
-                ];
-            }),
-            'weekly_attendance_rate' => [
-                'present' => $attendanceHistory->where('status', 'present')->count(),
-                'absent' => $attendanceHistory->where('status', 'absent')->count(),
-                'leave' => $attendanceHistory->where('status', 'leave')->count(),
-            ],
+            'material_consumption' => [],
         ];
     }
 

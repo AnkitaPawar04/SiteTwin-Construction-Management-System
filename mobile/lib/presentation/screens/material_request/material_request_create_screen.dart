@@ -344,10 +344,12 @@ class _MaterialRequestCreateScreenState
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
                     final quantity = double.tryParse(value) ?? item.quantity;
-                    _items[index] = _MaterialRequestItem(
-                      material: item.material,
-                      quantity: quantity,
-                    );
+                    setState(() {
+                      _items[index] = _MaterialRequestItem(
+                        material: item.material,
+                        quantity: quantity,
+                      );
+                    });
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {

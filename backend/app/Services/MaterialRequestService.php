@@ -47,9 +47,9 @@ class MaterialRequestService
         });
     }
 
-    public function approveMaterialRequest($requestId, $approverId, $status)
+    public function approveMaterialRequest($requestId, $approverId, $status, $allocatedItems = [])
     {
-        return DB::transaction(function () use ($requestId, $approverId, $status) {
+        return DB::transaction(function () use ($requestId, $approverId, $status, $allocatedItems) {
             $request = MaterialRequest::findOrFail($requestId);
 
             if ($request->status !== MaterialRequest::STATUS_PENDING) {
@@ -75,15 +75,21 @@ class MaterialRequestService
                 ]);
             }
 
-            // If approved, update stock
+            // If approved, update stock with allocated quantities
             if ($status === MaterialRequest::STATUS_APPROVED) {
                 foreach ($request->items as $item) {
-                    $this->stockService->addStock(
-                        $request->project_id,
-                        $item->material_id,
-                        $item->quantity,
-                        $request->id
-                    );
+                    $quantity = isset($allocatedItems[$item->id]) 
+                        ? $allocatedItems[$item->id] 
+                        : $item->quantity;
+                    
+                    if ($quantity > 0) {
+                        $this->stockService->addStock(
+                            $request->project_id,
+                            $item->material_id,
+                            $quantity,
+                            $request->id
+                        );
+                    }
                 }
             }
 
@@ -98,9 +104,9 @@ class MaterialRequestService
         });
     }
 
-    public function updateRequestStatus($requestId, $approverId, $status, $remarks = null)
+    public function updateRequestStatus($requestId, $approverId, $status, $remarks = null, $allocatedItems = [])
     {
-        return DB::transaction(function () use ($requestId, $approverId, $status, $remarks) {
+        return DB::transaction(function () use ($requestId, $approverId, $status, $remarks, $allocatedItems) {
             $request = MaterialRequest::findOrFail($requestId);
 
             if ($request->status !== MaterialRequest::STATUS_PENDING) {
@@ -127,15 +133,27 @@ class MaterialRequestService
                 ]);
             }
 
-            // If approved, update stock
+            // If approved, update stock with allocated quantities
             if ($status === 'approved') {
                 foreach ($request->items as $item) {
-                    $this->stockService->addStock(
-                        $request->project_id,
-                        $item->material_id,
-                        $item->quantity,
-                        $request->id
-                    );
+                    // Check for both numeric and string keys due to JSON encoding
+                    $quantity = isset($allocatedItems[$item->id]) 
+                        ? $allocatedItems[$item->id] 
+                        : (isset($allocatedItems[(string)$item->id]) 
+                            ? $allocatedItems[(string)$item->id] 
+                            : $item->quantity);
+                    
+                    // Ensure quantity is numeric
+                    $quantity = floatval($quantity);
+                    
+                    if ($quantity > 0) {
+                        $this->stockService->addStock(
+                            $request->project_id,
+                            $item->material_id,
+                            $quantity,
+                            $request->id
+                        );
+                    }
                 }
             }
 

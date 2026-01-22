@@ -22,6 +22,19 @@ class _MaterialRequestApprovalScreenState
     extends ConsumerState<MaterialRequestApprovalScreen> {
   bool _isLoading = false;
   final _remarksController = TextEditingController();
+  late final Map<int, double> _allocatedQuantities;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize allocated quantities with requested quantities
+    _allocatedQuantities = {};
+    for (var item in widget.materialRequest.items) {
+      // Ensure quantity is a double for JSON serialization
+      final doubleQty = item.quantity.toDouble();
+      _allocatedQuantities[item.id] = doubleQty;
+    }
+  }
 
   @override
   void dispose() {
@@ -30,8 +43,16 @@ class _MaterialRequestApprovalScreenState
   }
 
   Future<void> _handleApproval(bool isApproved) async {
+    if (isApproved) {
+      // Show quantity allocation dialog
+      if (!mounted) return;
+      final proceed = await _showQuantityAllocationDialog();
+      if (proceed != true) return;
+    }
+
     final action = isApproved ? 'approve' : 'reject';
 
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -62,6 +83,7 @@ class _MaterialRequestApprovalScreenState
         widget.materialRequest.id,
         isApproved ? 'approved' : 'rejected',
         _remarksController.text.trim(),
+        allocatedItems: isApproved ? _allocatedQuantities : null,
       );
 
       if (mounted) {
@@ -86,6 +108,17 @@ class _MaterialRequestApprovalScreenState
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<bool?> _showQuantityAllocationDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _QuantityAllocationDialog(
+        items: widget.materialRequest.items,
+        allocatedQuantities: _allocatedQuantities,
+      ),
+    );
   }
 
   @override
@@ -120,10 +153,7 @@ class _MaterialRequestApprovalScreenState
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                DateFormat('dd MMM yyyy').format(
-                                  DateTime.parse(
-                                      widget.materialRequest.requestDate),
-                                ),
+                                _formatDate(widget.materialRequest.requestDate),
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ],
@@ -267,6 +297,16 @@ class _MaterialRequestApprovalScreenState
     );
   }
 
+  String _formatDate(String dateString) {
+    try {
+      if (dateString.isEmpty) return '-';
+      final date = DateTime.parse(dateString);
+      return DateFormat('dd MMM yyyy').format(date);
+    } catch (_) {
+      return '-';
+    }
+  }
+
   Widget _buildMaterialItem(
       BuildContext context, MaterialRequestItemModel item) {
     return Container(
@@ -346,6 +386,103 @@ class _MaterialRequestApprovalScreenState
         ),
       ),
       backgroundColor: color,
+    );
+  }
+}
+
+/// Quantity Allocation Dialog
+class _QuantityAllocationDialog extends StatefulWidget {
+  final List<MaterialRequestItemModel> items;
+  final Map<int, double> allocatedQuantities;
+
+  const _QuantityAllocationDialog({
+    required this.items,
+    required this.allocatedQuantities,
+  });
+
+  @override
+  State<_QuantityAllocationDialog> createState() =>
+      _QuantityAllocationDialogState();
+}
+
+class _QuantityAllocationDialogState extends State<_QuantityAllocationDialog> {
+  late Map<int, TextEditingController> _controllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = {};
+    for (var item in widget.items) {
+      _controllers[item.id] = TextEditingController(
+        text: widget.allocatedQuantities[item.id]?.toString() ?? item.quantity.toString(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _saveAllocations() {
+    for (var item in widget.items) {
+      final value = double.tryParse(_controllers[item.id]?.text ?? '0') ?? 0;
+      widget.allocatedQuantities[item.id] = value;
+    }
+    Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Allocate Quantities'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: widget.items.map((item) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.materialName ?? 'Material #${item.materialId}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Requested: ${item.quantity} ${item.unit ?? 'units'}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _controllers[item.id],
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Allocate quantity',
+                      border: const OutlineInputBorder(),
+                      suffixText: item.unit ?? 'units',
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _saveAllocations,
+          child: const Text('Confirm'),
+        ),
+      ],
     );
   }
 }

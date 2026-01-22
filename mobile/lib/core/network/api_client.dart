@@ -3,7 +3,6 @@ import 'package:mobile/core/constants/api_constants.dart';
 import 'package:mobile/core/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_constants.dart';
-import 'package:dio/dio.dart' show Options, ResponseType;
 
 class ApiClient {
   late final Dio _dio;

@@ -34,7 +34,7 @@ class _MaterialRequestListScreenState
       final user = ref.read(authStateProvider).value;
       
       // Load appropriate requests based on user role
-      if (user?.isEngineer == true || user?.isManager == true) {
+      if (user?.isEngineer == true || user?.isManager == true || user?.isOwner == true) {
         _requests = await repository.getPendingRequests();
       } else {
         _requests = await repository.getMyRequests();
@@ -52,48 +52,12 @@ class _MaterialRequestListScreenState
     }
   }
 
-  Future<void> _approveRequest(int requestId) async {
-    try {
-      await ref.read(materialRequestRepositoryProvider).approveRequest(requestId);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request approved successfully')),
-        );
-        _loadRequests();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to approve: $e')),
-        );
-      }
-    }
-  }
 
-  Future<void> _rejectRequest(int requestId) async {
-    try {
-      await ref.read(materialRequestRepositoryProvider).rejectRequest(requestId);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request rejected')),
-        );
-        _loadRequests();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reject: $e')),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
-    final canApprove = user?.isEngineer == true || user?.isManager == true;
+    final canApprove = user?.isManager == true || user?.isOwner == true;
 
     return Scaffold(
       appBar: AppBar(
@@ -154,8 +118,6 @@ class _MaterialRequestListScreenState
                                 }
                               }
                             : null,
-                        onApprove: () => _approveRequest(request.id),
-                        onReject: () => _rejectRequest(request.id),
                       );
                     },
                   ),
@@ -184,15 +146,11 @@ class _MaterialRequestCard extends StatelessWidget {
   final MaterialRequestModel request;
   final bool canApprove;
   final VoidCallback? onTap;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
 
   const _MaterialRequestCard({
     required this.request,
     required this.canApprove,
     this.onTap,
-    required this.onApprove,
-    required this.onReject,
   });
 
   Color _getStatusColor() {
@@ -329,40 +287,21 @@ class _MaterialRequestCard extends StatelessWidget {
                 )),
             const SizedBox(height: 12),
             Text(
-              'Created: ${DateTime.parse(request.createdAt).toLocal().toString().split('.')[0]}',
+              'Created: ${_formatDateTime(request.createdAt)}',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
               ),
             ),
             if (canApprove && request.status == 'pending') ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: onApprove,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Approve'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.successColor,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: onReject,
-                      icon: const Icon(Icons.close),
-                      label: const Text('Reject'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.errorColor,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                'Tap to approve or reject',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.blue[600],
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ],
             ],
@@ -371,4 +310,12 @@ class _MaterialRequestCard extends StatelessWidget {
       ),
     );
   }
-}
+  String _formatDateTime(String dateTimeString) {
+    try {
+      if (dateTimeString.isEmpty) return '-';
+      final dateTime = DateTime.parse(dateTimeString);
+      return dateTime.toLocal().toString().split('.')[0];
+    } catch (_) {
+      return '-';
+    }
+  }}

@@ -5,60 +5,31 @@ import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:mobile/data/models/dashboard_model.dart';
 
-class DashboardScreen extends ConsumerStatefulWidget {
+// Provider to get dashboard data based on current user
+final dashboardDataProvider = FutureProvider<DashboardModel?>((ref) async {
+  final user = await ref.watch(authStateProvider.future);
+  final dashboardRepo = ref.watch(dashboardRepositoryProvider);
+  
+  if (user == null) return null;
+  
+  if (user.role == 'owner') {
+    return await dashboardRepo.getOwnerDashboard();
+  } else if (user.role == 'manager' || user.role == 'site_incharge') {
+    return await dashboardRepo.getManagerDashboard();
+  } else if (user.role == 'worker' || user.role == 'engineer') {
+    return await dashboardRepo.getWorkerDashboard();
+  }
+  
+  return null;
+});
+
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  bool _isLoading = false;
-  DashboardModel? _dashboardData;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDashboardData();
-  }
-
-  Future<void> _loadDashboardData() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-    
-    try {
-      final user = ref.read(authStateProvider).value;
-      final dashboardRepo = ref.read(dashboardRepositoryProvider);
-      
-      if (user?.role == 'owner') {
-        final data = await dashboardRepo.getOwnerDashboard();
-        if (!mounted) return;
-        setState(() => _dashboardData = data);
-      } else if (user?.role == 'manager' || user?.role == 'site_incharge') {
-        final data = await dashboardRepo.getManagerDashboard();
-        if (!mounted) return;
-        setState(() => _dashboardData = data);
-      } else if (user?.role == 'worker' || user?.role == 'engineer') {
-        final data = await dashboardRepo.getWorkerDashboard();
-        if (!mounted) return;
-        setState(() => _dashboardData = data);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load dashboard: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = ref.watch(authStateProvider).value;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider);
+    final dashboardData = ref.watch(dashboardDataProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -66,176 +37,244 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadDashboardData,
+            onPressed: () => ref.invalidate(dashboardDataProvider),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadDashboardData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Welcome Card
-                  Card(
-                    color: AppTheme.primaryColor,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome back,',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            user?.name ?? 'User',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '${user?.role.toUpperCase() ?? 'USER'} Dashboard',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Statistics Grid - Show owner stats if available
-                  if (user?.role == 'owner' && _dashboardData != null) ...[
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      children: [
-                        _StatCard(
-                          title: 'Projects',
-                          value: '${_dashboardData!.projectsCount}',
-                          icon: Icons.construction,
-                          color: Colors.blue,
-                        ),
-                        _StatCard(
-                          title: 'Invoices',
-                          value: '${_dashboardData!.financialOverview.totalInvoices}',
-                          icon: Icons.receipt_long,
-                          color: Colors.green,
-                        ),
-                        _StatCard(
-                          title: 'Today Attendance',
-                          value: '${_dashboardData!.attendanceSummary.todayAttendance}',
-                          icon: Icons.people,
-                          color: Colors.orange,
-                        ),
-                        _StatCard(
-                          title: 'Total Workers',
-                          value: '${_dashboardData!.attendanceSummary.totalWorkers}',
-                          icon: Icons.person,
-                          color: Colors.purple,
-                        ),
-                      ],
-                    ),
-                  ] else
-                    // Default statistics grid for other roles
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      children: [
-                        _StatCard(
-                          title: 'Projects',
-                          value: '0',
-                          icon: Icons.construction,
-                          color: Colors.blue,
-                        ),
-                        _StatCard(
-                          title: 'Active Tasks',
-                          value: '0',
-                          icon: Icons.task_alt,
-                          color: Colors.green,
-                        ),
-                        _StatCard(
-                          title: 'Pending DPRs',
-                          value: '0',
-                          icon: Icons.description,
-                          color: Colors.orange,
-                        ),
-                        _StatCard(
-                          title: 'Team Members',
-                          value: '0',
-                          icon: Icons.people,
-                          color: Colors.purple,
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 16),
-
-                  // Recent Activity
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Recent Activity',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildActivityItem(
-                            icon: Icons.check_circle,
-                            title: 'DPR Approved',
-                            subtitle: 'Project: Commercial Plaza',
-                            time: '2 hours ago',
-                            color: AppTheme.successColor,
-                          ),
-                          const Divider(),
-                          _buildActivityItem(
-                            icon: Icons.add_task,
-                            title: 'New Task Assigned',
-                            subtitle: 'Foundation work - Phase 2',
-                            time: '5 hours ago',
-                            color: AppTheme.primaryColor,
-                          ),
-                          const Divider(),
-                          _buildActivityItem(
-                            icon: Icons.inventory_2,
-                            title: 'Material Request',
-                            subtitle: 'Cement - 100 bags',
-                            time: '1 day ago',
-                            color: AppTheme.warningColor,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+      body: dashboardData.when(
+        data: (data) {
+          if (data == null) {
+            return const Center(child: Text('No dashboard data available'));
+          }
+          return RefreshIndicator(
+            onRefresh: () async => ref.refresh(dashboardDataProvider.future),
+            child: _buildDashboardContent(context, ref, user, data),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Failed to load dashboard: $error'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(dashboardDataProvider),
+                child: const Text('Retry'),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildActivityItem({
+  Widget _buildDashboardContent(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<dynamic> userAsync,
+    DashboardModel data,
+  ) {
+    final user = userAsync.value;
+    if (user == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Welcome Card
+        Card(
+          color: AppTheme.primaryColor,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back,',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user?.name ?? 'User',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${user?.role.toUpperCase() ?? 'USER'} Dashboard',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Statistics Grid - Show role-specific stats
+        if (user?.role == 'owner') ...[
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            children: [
+              _StatCard(
+                title: 'Projects',
+                value: '${data.projectsCount}',
+                icon: Icons.construction,
+                color: Colors.blue,
+              ),
+              _StatCard(
+                title: 'Invoices',
+                value: '${data.financialOverview.totalInvoices}',
+                icon: Icons.receipt_long,
+                color: Colors.green,
+              ),
+              _StatCard(
+                title: 'Today Attendance',
+                value: '${data.attendanceSummary.todayAttendance}',
+                icon: Icons.people,
+                color: Colors.orange,
+              ),
+              _StatCard(
+                title: 'Total Workers',
+                value: '${data.attendanceSummary.totalWorkers}',
+                icon: Icons.person,
+                color: Colors.purple,
+              ),
+            ],
+          ),
+        ] else if (user?.role == 'manager' || user?.role == 'site_incharge') ...[
+          // Manager dashboard stats
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            children: [
+              _StatCard(
+                title: 'Projects',
+                value: '${data.projectsCount}',
+                icon: Icons.construction,
+                color: Colors.blue,
+              ),
+              _StatCard(
+                title: 'Invoices',
+                value: '${data.financialOverview.totalInvoices}',
+                icon: Icons.receipt_long,
+                color: Colors.green,
+              ),
+              _StatCard(
+                title: 'Present Today',
+                value: '${data.attendanceSummary.todayAttendance}',
+                icon: Icons.people,
+                color: Colors.orange,
+              ),
+              _StatCard(
+                title: 'Team Members',
+                value: '${data.attendanceSummary.totalWorkers}',
+                icon: Icons.person,
+                color: Colors.purple,
+              ),
+            ],
+          ),
+        ] else
+          // Worker/Engineer dashboard stats
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            children: [
+              _StatCard(
+                title: 'Projects',
+                value: '${data.projectsCount}',
+                icon: Icons.construction,
+                color: Colors.blue,
+              ),
+              _StatCard(
+                title: 'Attendance Status',
+                value: '${data.attendanceSummary.todayAttendance}',
+                icon: Icons.task_alt,
+                color: Colors.green,
+              ),
+              _StatCard(
+                title: 'Pending DPRs',
+                value: '0',
+                icon: Icons.description,
+                color: Colors.orange,
+              ),
+              _StatCard(
+                title: 'Team Members',
+                value: '0',
+                icon: Icons.people,
+                color: Colors.purple,
+              ),
+            ],
+          ),
+        const SizedBox(height: 16),
+
+        // Recent Activity
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recent Activity',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildActivityItem(
+                  icon: Icons.check_circle,
+                  title: 'DPR Approved',
+                  subtitle: 'Project: Commercial Plaza',
+                  time: '2 hours ago',
+                  color: AppTheme.successColor,
+                ),
+                const Divider(),
+                _buildActivityItem(
+                  icon: Icons.add_task,
+                  title: 'New Task Assigned',
+                  subtitle: 'Foundation work - Phase 2',
+                  time: '5 hours ago',
+                  color: AppTheme.primaryColor,
+                ),
+                const Divider(),
+                _buildActivityItem(
+                  icon: Icons.inventory_2,
+                  title: 'Material Request',
+                  subtitle: 'Cement - 100 bags',
+                  time: '1 day ago',
+                  color: AppTheme.warningColor,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static Widget _buildActivityItem({
     required IconData icon,
     required String title,
     required String subtitle,
