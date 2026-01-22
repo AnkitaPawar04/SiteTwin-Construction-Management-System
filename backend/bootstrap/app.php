@@ -12,7 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Add request/response logger middleware
+        $middleware->append(\App\Http\Middleware\RequestResponseLogger::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
