@@ -19,7 +19,7 @@ class MaterialRequestPolicy
 
     public function create(User $user)
     {
-        return $user->isEngineer() || $user->isManager() || $user->isOwner();
+        return $user->isWorker() || $user->isEngineer() || $user->isManager() || $user->isOwner();
     }
 
     public function update(User $user, MaterialRequest $request)

@@ -57,7 +57,7 @@ class DashboardController extends Controller
      */
     public function workerDashboard(Request $request)
     {
-        if (!$request->user()->isWorker()) {
+        if (!$request->user()->isWorker() && !$request->user()->isEngineer()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized access'

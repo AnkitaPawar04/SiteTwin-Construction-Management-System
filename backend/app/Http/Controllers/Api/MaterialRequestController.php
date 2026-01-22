@@ -20,15 +20,23 @@ class MaterialRequestController extends Controller
 
     public function index(Request $request)
     {
-        if ($request->has('project_id')) {
-            $requests = $this->materialRequestService->getMaterialRequestsByProject(
-                $request->query('project_id')
-            );
-        } else {
+        // Workers and engineers can only see their own requests
+        if ($request->user()->isWorker() || $request->user()->isEngineer()) {
             $requests = MaterialRequest::where('requested_by', $request->user()->id)
                 ->with(['items.material', 'project'])
                 ->orderBy('created_at', 'desc')
                 ->get();
+        } else {
+            // Managers and owners can see all requests for their projects
+            if ($request->has('project_id')) {
+                $requests = $this->materialRequestService->getMaterialRequestsByProject(
+                    $request->query('project_id')
+                );
+            } else {
+                $requests = MaterialRequest::with(['items.material', 'project'])
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+            }
         }
 
         return response()->json([
@@ -133,6 +141,14 @@ class MaterialRequestController extends Controller
 
     public function pending(Request $request)
     {
+        // Only managers and owners can see pending requests
+        if (!$request->user()->isManager() && !$request->user()->isOwner()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access'
+            ], 403);
+        }
+
         $projectId = $request->query('project_id');
         
         $query = MaterialRequest::where('status', MaterialRequest::STATUS_PENDING)
