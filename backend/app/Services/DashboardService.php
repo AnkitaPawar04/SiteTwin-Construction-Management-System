@@ -136,9 +136,9 @@ class DashboardService
             'financial_overview' => [
                 'total_invoices' => Invoice::whereIn('project_id', $projectIds)->count(),
                 'total_amount' => Invoice::whereIn('project_id', $projectIds)->sum('total_amount') ?? 0,
-                'total_gst' => Invoice::whereIn('project_id', $projectIds)->sum('total_gst') ?? 0,
-                'paid_amount' => Invoice::whereIn('project_id', $projectIds)->where('status', 'paid')->sum('total_amount') ?? 0,
-                'pending_amount' => Invoice::whereIn('project_id', $projectIds)->where('status', 'pending')->sum('total_amount') ?? 0,
+                'total_gst' => Invoice::whereIn('project_id', $projectIds)->sum('gst_amount') ?? 0,
+                'paid_amount' => Invoice::whereIn('project_id', $projectIds)->where('status', Invoice::STATUS_PAID)->sum('total_amount') ?? 0,
+                'pending_amount' => Invoice::whereIn('project_id', $projectIds)->where('status', Invoice::STATUS_GENERATED)->sum('total_amount') ?? 0,
             ],
             'attendance_summary' => [
                 'today_attendance' => $todayAttendance->where('status', 'present')->count(),
