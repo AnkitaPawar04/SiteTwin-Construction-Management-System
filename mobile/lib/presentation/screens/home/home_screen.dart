@@ -11,6 +11,7 @@ import 'package:mobile/presentation/screens/notifications/notifications_screen.d
 import 'package:mobile/presentation/screens/projects/projects_screen.dart';
 import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dart';
 import 'package:mobile/presentation/screens/invoices/invoices_screen.dart';
+import 'package:mobile/presentation/screens/analytics/time_vs_cost_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -281,8 +282,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 );
               },
             ),
-          
-          const Divider(),
+                    // Time vs Cost Analysis - Owner only
+          if (user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.analytics),
+              title: const Text('Time vs Cost Analysis'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TimeVsCostScreen(),
+                  ),
+                );
+              },
+            ),
+                    const Divider(),
           
           // Settings
           ListTile(
