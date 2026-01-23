@@ -7,6 +7,7 @@ use App\Models\DprPhoto;
 use App\Models\Approval;
 use App\Models\Notification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class DprService
@@ -24,12 +25,19 @@ class DprService
                 'status' => DailyProgressReport::STATUS_SUBMITTED,
             ]);
 
-            // Add photos
+            // Add photos - store files and save paths
             if (!empty($photos)) {
-                foreach ($photos as $photoUrl) {
+                foreach ($photos as $photo) {
+                    // Generate unique filename with proper naming convention
+                    $fileName = $this->generatePhotoFileName($dpr->id, $photo);
+                    
+                    // Store the file in public disk (accessible via HTTP)
+                    $path = $photo->store("dprs/project_{$projectId}/dpr_{$dpr->id}", 'public');
+                    
+                    // Save the file path to database
                     DprPhoto::create([
                         'dpr_id' => $dpr->id,
-                        'photo_url' => $photoUrl,
+                        'photo_url' => $path,
                     ]);
                 }
             }
@@ -43,6 +51,19 @@ class DprService
 
             return $dpr->load('photos');
         });
+    }
+
+    /**
+     * Generate a proper naming convention for photos
+     * Format: dpr_{dpr_id}_{timestamp}_{random}.{extension}
+     */
+    private function generatePhotoFileName($dprId, $photoFile)
+    {
+        $timestamp = time();
+        $random = mt_rand(1000, 9999);
+        $extension = $photoFile->getClientOriginalExtension();
+        
+        return "dpr_{$dprId}_{$timestamp}_{$random}.{$extension}";
     }
 
     public function approveDpr($dprId, $approverId, $status)

@@ -151,4 +151,33 @@ class DprController extends Controller
             'data' => $dprs
         ]);
     }
+
+    public function getPhoto($dprId, $photoId)
+    {
+        try {
+            $dpr = DailyProgressReport::findOrFail($dprId);
+            $photo = $dpr->photos()->where('id', $photoId)->firstOrFail();
+            
+            $filePath = storage_path('app/public/' . $photo->photo_url);
+            
+            if (!file_exists($filePath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Photo not found'
+                ], 404);
+            }
+
+            return response()->file($filePath);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not found'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving photo'
+            ], 500);
+        }
+    }
 }

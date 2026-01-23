@@ -19,7 +19,7 @@ class StoreDprRequest extends FormRequest
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
             'photos' => 'nullable|array',
-            'photos.*' => 'required|string', // Base64 or URLs
+            'photos.*' => 'required|file|image|mimes:jpeg,png,jpg|max:5120', // Max 5MB
         ];
     }
 }

@@ -9,8 +9,20 @@ import 'package:mobile/presentation/screens/dpr/dpr_approval_screen.dart';
 
 final myDprsProvider = FutureProvider.autoDispose<List<DprModel>>((ref) async {
   final repo = ref.watch(dprRepositoryProvider);
+  final authState = ref.watch(authStateProvider);
+  final user = authState.value;
+  
+  // Owners and managers see all pending DPRs for approval
+  if (user?.role == 'owner' || user?.role == 'manager') {
+    return await repo.getPendingDprs();
+  }
+  
+  // Workers and engineers see only their own DPRs
   return await repo.getMyDprs();
 });
+
+final dprFilterProvider = StateProvider<String>((ref) => 'all');
+final dprProjectFilterProvider = StateProvider<int?>((ref) => null);
 
 class DprListScreen extends ConsumerWidget {
   const DprListScreen({super.key});
@@ -19,7 +31,10 @@ class DprListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dprsAsync = ref.watch(myDprsProvider);
     final authState = ref.watch(authStateProvider);
+    final statusFilter = ref.watch(dprFilterProvider);
+    final projectFilter = ref.watch(dprProjectFilterProvider);
     final user = authState.value;
+    final isApprover = user?.role == 'owner' || user?.role == 'manager';
     
     return Scaffold(
       body: RefreshIndicator(
@@ -28,7 +43,16 @@ class DprListScreen extends ConsumerWidget {
         },
         child: dprsAsync.when(
           data: (dprs) {
-            if (dprs.isEmpty) {
+            // Filter DPRs
+            var filteredDprs = dprs;
+            if (statusFilter != 'all') {
+              filteredDprs = filteredDprs.where((d) => d.status == statusFilter).toList();
+            }
+            if (projectFilter != null) {
+              filteredDprs = filteredDprs.where((d) => d.projectId == projectFilter).toList();
+            }
+            
+            if (filteredDprs.isEmpty) {
               return const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -41,24 +65,82 @@ class DprListScreen extends ConsumerWidget {
               );
             }
             
-            return ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: dprs.length,
-              itemBuilder: (context, index) => DprCard(
-                dpr: dprs[index],
-                onTap: user?.role == 'manager'
-                    ? () async {
-                        final result = await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => DprApprovalScreen(dpr: dprs[index]),
+            return Column(
+              children: [
+                if (isApprover) ...[
+                  Container(
+                    color: Colors.grey[100],
+                    padding: const EdgeInsets.all(12.0),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            context,
+                            ref,
+                            'All',
+                            'all',
+                            statusFilter == 'all',
                           ),
-                        );
-                        if (result == true) {
-                          ref.invalidate(myDprsProvider);
-                        }
-                      }
-                    : null,
-              ),
+                          _buildFilterChip(
+                            context,
+                            ref,
+                            'Submitted',
+                            'submitted',
+                            statusFilter == 'submitted',
+                          ),
+                          _buildFilterChip(
+                            context,
+                            ref,
+                            'Approved',
+                            'approved',
+                            statusFilter == 'approved',
+                          ),
+                          _buildFilterChip(
+                            context,
+                            ref,
+                            'Rejected',
+                            'rejected',
+                            statusFilter == 'rejected',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: filteredDprs.length,
+                    itemBuilder: (context, index) => DprCard(
+                      dpr: filteredDprs[index],
+                      isApprover: isApprover,
+                      onTap: isApprover
+                          ? () async {
+                              final result = await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => DprApprovalScreen(dpr: filteredDprs[index]),
+                                ),
+                              );
+                              if (result == true) {
+                                ref.invalidate(myDprsProvider);
+                              }
+                            }
+                          : null,
+                      onApprove: isApprover
+                          ? () async {
+                              await _approveDpr(context, ref, filteredDprs[index]);
+                            }
+                          : null,
+                      onReject: isApprover
+                          ? () async {
+                              await _rejectDpr(context, ref, filteredDprs[index]);
+                            }
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -94,13 +176,151 @@ class DprListScreen extends ConsumerWidget {
           : null,
     );
   }
+  
+  Widget _buildFilterChip(
+    BuildContext context,
+    WidgetRef ref,
+    String label,
+    String value,
+    bool isSelected,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (_) {
+          ref.read(dprFilterProvider.notifier).state = value;
+        },
+      ),
+    );
+  }
+  
+  Future<void> _approveDpr(
+    BuildContext context,
+    WidgetRef ref,
+    DprModel dpr,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Approve DPR'),
+        content: const Text('Are you sure you want to approve this Daily Progress Report?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed ?? false) {
+      try {
+        final repo = ref.read(dprRepositoryProvider);
+        await repo.approveDpr(dpr.id!, '');
+        ref.invalidate(myDprsProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('DPR approved successfully')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+  
+  Future<void> _rejectDpr(
+    BuildContext context,
+    WidgetRef ref,
+    DprModel dpr,
+  ) async {
+    final remarksController = TextEditingController();
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject DPR'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Are you sure you want to reject this Daily Progress Report?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: remarksController,
+              decoration: InputDecoration(
+                hintText: 'Reason for rejection (optional)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed ?? false) {
+      try {
+        final repo = ref.read(dprRepositoryProvider);
+        await repo.rejectDpr(dpr.id!, remarksController.text);
+        ref.invalidate(myDprsProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('DPR rejected successfully')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+              label: const Text('New DPR'),
+            )
+          : null,
+    );
+  }
 }
 
 class DprCard extends StatelessWidget {
   final DprModel dpr;
   final VoidCallback? onTap;
+  final VoidCallback? onApprove;
+  final VoidCallback? onReject;
+  final bool isApprover;
   
-  const DprCard({super.key, required this.dpr, this.onTap});
+  const DprCard({
+    super.key, 
+    required this.dpr, 
+    this.onTap,
+    this.onApprove,
+    this.onReject,
+    this.isApprover = false,
+  });
   
   Color _getStatusColor() {
     switch (dpr.status) {
@@ -243,6 +463,39 @@ class DprCard extends StatelessWidget {
                   ),
               ],
             ),
+            
+            // Action buttons for approvers
+            if (isApprover && dpr.status == 'submitted') ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: onApprove,
+                      icon: const Icon(Icons.check),
+                      label: const Text('Approve'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: onReject,
+                      icon: const Icon(Icons.close),
+                      label: const Text('Reject'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             ],
           ),
         ),

@@ -16,7 +16,8 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OfflineSyncController;
 
 // Public routes
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::get('/dprs/{dprId}/photos/{photoId}', [DprController::class, 'getPhoto'])->name('dprs.photo');
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -49,10 +50,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // DPR routes - custom routes before apiResource to avoid id collision
     Route::get('/dprs/my', [DprController::class, 'index']);
+    Route::get('/dprs/pending/all', [DprController::class, 'pending']);
     Route::apiResource('dprs', DprController::class)->only(['index', 'store', 'show']);
     Route::post('/dprs/{id}/approve', [DprController::class, 'approve']);
     Route::patch('/dprs/{id}/status', [DprController::class, 'updateStatus']);
-    Route::get('/dprs/pending/all', [DprController::class, 'pending']);
 
     // Material routes
     Route::apiResource('materials', MaterialController::class);

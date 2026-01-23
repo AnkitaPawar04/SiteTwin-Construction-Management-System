@@ -14,9 +14,14 @@ final projectsProvider = FutureProvider.autoDispose<List<ProjectModel>>((ref) as
   return await repo.getUserProjects();
 });
 
-final todayAttendanceProvider = FutureProvider.autoDispose<AttendanceModel?>((ref) async {
+// Project-aware provider that takes projectId as parameter
+final todayAttendanceProvider = FutureProvider.autoDispose
+    .family<AttendanceModel?, int?>((ref, projectId) async {
+  if (projectId == null) {
+    return null;
+  }
   final repo = ref.watch(attendanceRepositoryProvider);
-  return await repo.getTodayAttendance();
+  return await repo.getTodayAttendanceForProject(projectId);
 });
 
 class AttendanceScreen extends ConsumerStatefulWidget {
@@ -129,7 +134,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         longitude: position.longitude,
       );
       
-      ref.invalidate(todayAttendanceProvider);
+      ref.invalidate(todayAttendanceProvider(_selectedProjectId));
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -178,7 +183,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final position = await _getCurrentLocation();
       if (position == null) return;
       
-      final todayAttendance = await ref.read(todayAttendanceProvider.future);
+      final todayAttendance = await ref.read(todayAttendanceProvider(_selectedProjectId).future);
       if (todayAttendance == null) {
         throw Exception('No check-in found for today');
       }
@@ -190,7 +195,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         longitude: position.longitude,
       );
       
-      ref.invalidate(todayAttendanceProvider);
+      ref.invalidate(todayAttendanceProvider(_selectedProjectId));
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -219,13 +224,23 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final authState = ref.watch(authStateProvider);
     final user = authState.value;
     final canMarkAttendance = user?.role == 'worker' || user?.role == 'engineer';
-    final todayAttendanceAsync = ref.watch(todayAttendanceProvider);
     final projectsAsync = ref.watch(projectsProvider);
+    
+    // Auto-select first project if none selected and projects are available
+    if (_selectedProjectId == null && projectsAsync.hasValue && projectsAsync.value!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _selectedProjectId = projectsAsync.value!.first.id);
+        }
+      });
+    }
+    
+    final todayAttendanceAsync = ref.watch(todayAttendanceProvider(_selectedProjectId));
     
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(todayAttendanceProvider);
+          ref.invalidate(todayAttendanceProvider(_selectedProjectId));
           ref.invalidate(projectsProvider);
         },
         child: SingleChildScrollView(
@@ -268,15 +283,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                           child: Text('No projects assigned', style: TextStyle(color: Colors.grey[600])),
                         ),
                       );
-                    }
-                    
-                    // Auto-select first project if none selected
-                    if (_selectedProjectId == null && projects.isNotEmpty) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          setState(() => _selectedProjectId = projects.first.id);
-                        }
-                      });
                     }
                     
                     return Card(

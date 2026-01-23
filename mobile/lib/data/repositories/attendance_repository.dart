@@ -99,7 +99,7 @@ class AttendanceRepository {
     if (isOnline) {
       try {
         final response = await _apiClient.post(
-          ApiConstants.attendanceCheckOut,
+          '${ApiConstants.attendance}/$attendanceId/check-out',
           data: {
             'latitude': latitude,
             'longitude': longitude,
@@ -239,23 +239,56 @@ class AttendanceRepository {
   Future<AttendanceModel?> getTodayAttendance() async {
     final date = DateTime.now().toIso8601String().split('T')[0];
     
-    // Try from local storage first
-    final localAttendance = _attendanceBox.values
-        .where((a) => a.date == date)
-        .firstOrNull;
-    
-    if (localAttendance != null) {
-      return localAttendance;
-    }
-    
-    // Fetch from API if online
+    // Always try to fetch from API first if online to get fresh data
     final isOnline = await _networkInfo.isConnected;
     if (isOnline) {
-      final attendances = await getMyAttendance();
-      return attendances.where((a) => a.date == date).firstOrNull;
+      try {
+        final attendances = await getMyAttendance();
+        final todayAttendance = attendances.where((a) => a.date.split('T')[0] == date).firstOrNull;
+        if (todayAttendance != null) {
+          return todayAttendance;
+        }
+      } catch (e) {
+        AppLogger.error('Failed to fetch today attendance from API', e);
+        // Fall through to local storage
+      }
     }
     
-    return null;
+    // Fall back to local storage if offline or API call failed
+    final localAttendance = _attendanceBox.values
+        .where((a) => a.date.split('T')[0] == date)
+        .firstOrNull;
+    
+    return localAttendance;
+  }
+
+  /// Get today's attendance for a specific project
+  Future<AttendanceModel?> getTodayAttendanceForProject(int projectId) async {
+    final date = DateTime.now().toIso8601String().split('T')[0];
+    
+    // Always try to fetch from API first if online to get fresh data
+    final isOnline = await _networkInfo.isConnected;
+    if (isOnline) {
+      try {
+        final attendances = await getProjectAttendance(projectId);
+        final todayAttendance = attendances
+            .where((a) => a.date.split('T')[0] == date && a.projectId == projectId)
+            .firstOrNull;
+        if (todayAttendance != null) {
+          return todayAttendance;
+        }
+      } catch (e) {
+        AppLogger.error('Failed to fetch today attendance for project from API', e);
+        // Fall through to local storage
+      }
+    }
+    
+    // Fall back to local storage if offline or API call failed
+    final localAttendance = _attendanceBox.values
+        .where((a) => a.date.split('T')[0] == date && a.projectId == projectId)
+        .firstOrNull;
+    
+    return localAttendance;
   }
   
   Future<void> syncPendingAttendance() async {

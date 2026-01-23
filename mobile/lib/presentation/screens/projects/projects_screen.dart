@@ -106,6 +106,8 @@ class ProjectCard extends ConsumerWidget {
     final now = DateTime.now();
     final isActive = now.isAfter(startDate) && now.isBefore(endDate);
     final isCompleted = now.isAfter(endDate);
+    final user = ref.watch(authStateProvider).value;
+    final canManageProject = user?.role == 'owner' || user?.role == 'manager';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -224,39 +226,41 @@ class ProjectCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditProjectScreen(project: project),
-                          ),
-                        ).then((result) {
-                          if (result == true) {
-                            ref.invalidate(projectsProvider);
-                          }
-                        });
-                      },
-                      icon: const Icon(Icons.edit, size: 18),
-                      label: const Text('Edit'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                  if (canManageProject) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditProjectScreen(project: project),
+                            ),
+                          ).then((result) {
+                            if (result == true) {
+                              ref.invalidate(projectsProvider);
+                            }
+                          });
+                        },
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showDeleteConfirmation(context, ref, project),
-                      icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                      label: const Text('Delete', style: TextStyle(color: Colors.red)),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showDeleteConfirmation(context, ref, project),
+                        icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                        label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
@@ -382,13 +386,16 @@ class ProjectCard extends ConsumerWidget {
   }
 }
 
-class _ProjectDetailsDialog extends StatelessWidget {
+class _ProjectDetailsDialog extends ConsumerWidget {
   final ProjectModel project;
 
   const _ProjectDetailsDialog({required this.project});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    final canManageProject = user?.role == 'owner' || user?.role == 'manager';
+    
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -431,19 +438,20 @@ class _ProjectDetailsDialog extends StatelessWidget {
                   onPressed: () => Navigator.pop(context),
                   child: Text(AppLocalizations.of(context).close.toUpperCase()),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ManageProjectUsersScreen(project: project),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.people),
-                  label: Text(AppLocalizations.of(context).translate('manage_users')),
-                ),
+                if (canManageProject)
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ManageProjectUsersScreen(project: project),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.people),
+                    label: Text(AppLocalizations.of(context).translate('manage_users')),
+                  ),
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);

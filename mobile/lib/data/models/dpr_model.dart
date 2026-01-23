@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package:mobile/core/constants/api_constants.dart';
 
 part 'dpr_model.g.dart';
 
@@ -61,7 +62,26 @@ class DprModel extends HiveObject {
   
   factory DprModel.fromJson(Map<String, dynamic> json) {
     final photos = json['photos'] as List<dynamic>?;
-    final photoUrls = photos?.map((p) => p['photo_url'] as String).toList() ?? [];
+    final photoUrls = photos?.map((p) {
+      // Use full_url if available (complete API endpoint URL)
+      final fullUrl = p['full_url'] as String?;
+      if (fullUrl != null && fullUrl.isNotEmpty) {
+        return fullUrl; // Already a complete URL
+      }
+      
+      // Fallback: construct URL from relative photo_url
+      final photoUrl = p['photo_url'] as String?;
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        if (photoUrl.startsWith('http')) {
+          return photoUrl;
+        }
+        // Construct full URL: base_url + /storage/ + photo_url
+        final baseUrlWithoutApi = ApiConstants.baseUrl.replaceFirst('/api', '');
+        return '$baseUrlWithoutApi/storage/$photoUrl';
+      }
+      
+      return '';
+    }).toList() ?? [];
     
     return DprModel(
       id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '0'),

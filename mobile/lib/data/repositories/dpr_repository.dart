@@ -41,7 +41,7 @@ class DprRepository {
           'longitude': longitude,
         });
         
-        // Add photos
+        // Add photos as multipart files
         for (int i = 0; i < photoPaths.length; i++) {
           formData.files.add(
             MapEntry(
@@ -146,6 +146,22 @@ class DprRepository {
     } on DioException catch (e) {
       AppLogger.error('DPR approval failed', e);
       throw Exception(e.response?.data['message'] ?? 'Approval failed');
+    }
+  }
+  
+  Future<void> rejectDpr(int dprId, String remarks) async {
+    try {
+      await _apiClient.post(
+        ApiConstants.dprApprove.replaceAll('{id}', dprId.toString()),
+        data: {
+          'status': 'rejected',
+          'remarks': remarks,
+        },
+      );
+      AppLogger.info('DPR rejected');
+    } on DioException catch (e) {
+      AppLogger.error('DPR rejection failed', e);
+      throw Exception(e.response?.data['message'] ?? 'Rejection failed');
     }
   }
   

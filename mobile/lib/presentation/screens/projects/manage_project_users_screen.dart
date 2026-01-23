@@ -4,6 +4,7 @@ import 'package:mobile/core/localization/app_localizations.dart';
 import 'package:mobile/data/models/project_model.dart';
 import 'package:mobile/data/models/user_model.dart';
 import 'package:mobile/providers/providers.dart';
+import 'package:mobile/providers/auth_provider.dart';
 
 final projectUsersProvider = FutureProvider.family<List<UserModel>, int>((ref, projectId) async {
   final apiClient = ref.watch(apiClientProvider);
@@ -107,8 +108,38 @@ class _ManageProjectUsersScreenState extends ConsumerState<ManageProjectUsersScr
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
+    final user = ref.watch(authStateProvider).value;
+    final canManageProject = user?.role == 'owner' || user?.role == 'manager';
     final projectUsersAsync = ref.watch(projectUsersProvider(widget.project.id));
     final allUsersAsync = ref.watch(allUsersProvider);
+
+    // If user doesn't have permission, show error
+    if (!canManageProject) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('${loc.translate('manage_users')} - ${widget.project.name}'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'You do not have permission to manage project users',
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

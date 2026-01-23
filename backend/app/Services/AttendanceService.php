@@ -59,7 +59,7 @@ class AttendanceService
             'check_in' => now(),
             'marked_latitude' => $latitude,
             'marked_longitude' => $longitude,
-            'distance_from_geofence' => isset($geofenceCheck) ? $geofenceCheck['distance'] : null,
+            'distance_from_geofence' => isset($geofenceCheck) ? (int)round($geofenceCheck['distance']) : null,
             'is_within_geofence' => isset($geofenceCheck) ? $geofenceCheck['is_within'] : true,
             'is_verified' => true,
         ]);

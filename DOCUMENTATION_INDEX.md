@@ -354,3 +354,45 @@ See: Role-based access control section in [OWNER_MANAGEMENT_FEATURES.md](./mobil
 **Last Updated**: Implementation Completion
 **Maintained By**: Development Team
 
+---
+
+## 📸 DPR Photo Storage & Serving
+
+### DPR Photo Implementation Documents
+
+| Document | Purpose | Best For | Read Time |
+|----------|---------|----------|-----------|
+| [DPR_PHOTO_QUICK_TEST.md](./DPR_PHOTO_QUICK_TEST.md) | Quick testing guide (5 minute test) | QA/Testing | 5 min |
+| [DPR_PHOTO_IMPLEMENTATION_STATUS.md](./DPR_PHOTO_IMPLEMENTATION_STATUS.md) | Complete implementation status and detailed testing workflow | Backend devs, QA | 10 min |
+| [DPR_PHOTO_CODE_WALKTHROUGH.md](./DPR_PHOTO_CODE_WALKTHROUGH.md) | Step-by-step code explanation with data flow | Developers | 15 min |
+
+### DPR Photo System Overview
+
+The DPR photo system enables secure storage and retrieval of images submitted with Daily Progress Reports:
+
+- **Upload**: Workers submit DPRs with photos → files stored in public disk
+- **Storage**: Photos organized in `storage/app/public/dprs/project_X/dpr_Y/`
+- **Serving**: API endpoint provides authenticated photo access
+- **Display**: Owner/Manager views photos in DPR list with proper authorization
+
+### How to Get Started with DPR Testing
+
+1. **Quick Test** (5 min): Use [DPR_PHOTO_QUICK_TEST.md](./DPR_PHOTO_QUICK_TEST.md)
+2. **Detailed Test** (30 min): Use [DPR_PHOTO_IMPLEMENTATION_STATUS.md](./DPR_PHOTO_IMPLEMENTATION_STATUS.md)
+3. **Understand Code** (1 hr): Read [DPR_PHOTO_CODE_WALKTHROUGH.md](./DPR_PHOTO_CODE_WALKTHROUGH.md)
+
+### Key Implementation Files
+
+**Backend Changes:**
+- `backend/app/Services/DprService.php` - Stores photos to public disk
+- `backend/app/Models/DprPhoto.php` - Adds full_url API endpoint attribute
+- `backend/app/Http/Controllers/Api/DprController.php` - Serves photos with authentication
+- `backend/routes/api.php` - Defines photo endpoint route
+
+**Mobile Changes:**
+- `mobile/lib/data/models/dpr_model.dart` - Uses full_url from API
+
+**Configuration:**
+- Laravel storage symlink: `public/storage` → `storage/app/public`
+- Environment: `.env` with `APP_URL=http://localhost:8000`
+
