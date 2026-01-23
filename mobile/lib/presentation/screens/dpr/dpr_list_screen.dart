@@ -21,8 +21,20 @@ final myDprsProvider = FutureProvider.autoDispose<List<DprModel>>((ref) async {
   return await repo.getMyDprs();
 });
 
-final dprFilterProvider = StateProvider<String>((ref) => 'all');
-final dprProjectFilterProvider = StateProvider<int?>((ref) => null);
+class DprFilterNotifier extends Notifier<String> {
+  @override
+  String build() {
+    return 'all';
+  }
+  
+  void setFilter(String status) {
+    state = status;
+  }
+}
+
+final dprFilterProvider = NotifierProvider<DprFilterNotifier, String>(
+  () => DprFilterNotifier(),
+);
 
 class DprListScreen extends ConsumerWidget {
   const DprListScreen({super.key});
@@ -32,7 +44,6 @@ class DprListScreen extends ConsumerWidget {
     final dprsAsync = ref.watch(myDprsProvider);
     final authState = ref.watch(authStateProvider);
     final statusFilter = ref.watch(dprFilterProvider);
-    final projectFilter = ref.watch(dprProjectFilterProvider);
     final user = authState.value;
     final isApprover = user?.role == 'owner' || user?.role == 'manager';
     
@@ -43,13 +54,10 @@ class DprListScreen extends ConsumerWidget {
         },
         child: dprsAsync.when(
           data: (dprs) {
-            // Filter DPRs
+            // Filter DPRs by status
             var filteredDprs = dprs;
             if (statusFilter != 'all') {
               filteredDprs = filteredDprs.where((d) => d.status == statusFilter).toList();
-            }
-            if (projectFilter != null) {
-              filteredDprs = filteredDprs.where((d) => d.projectId == projectFilter).toList();
             }
             
             if (filteredDprs.isEmpty) {
@@ -67,6 +75,7 @@ class DprListScreen extends ConsumerWidget {
             
             return Column(
               children: [
+                // Filter bar for approvers
                 if (isApprover) ...[
                   Container(
                     color: Colors.grey[100],
@@ -176,7 +185,7 @@ class DprListScreen extends ConsumerWidget {
           : null,
     );
   }
-  
+
   Widget _buildFilterChip(
     BuildContext context,
     WidgetRef ref,
@@ -190,12 +199,12 @@ class DprListScreen extends ConsumerWidget {
         label: Text(label),
         selected: isSelected,
         onSelected: (_) {
-          ref.read(dprFilterProvider.notifier).state = value;
+          ref.read(dprFilterProvider.notifier).setFilter(value);
         },
       ),
     );
   }
-  
+
   Future<void> _approveDpr(
     BuildContext context,
     WidgetRef ref,
@@ -222,7 +231,7 @@ class DprListScreen extends ConsumerWidget {
     if (confirmed ?? false) {
       try {
         final repo = ref.read(dprRepositoryProvider);
-        await repo.approveDpr(dpr.id!, '');
+        await repo.approveDpr(dpr.id!, 'approved');
         ref.invalidate(myDprsProvider);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -238,7 +247,7 @@ class DprListScreen extends ConsumerWidget {
       }
     }
   }
-  
+
   Future<void> _rejectDpr(
     BuildContext context,
     WidgetRef ref,
@@ -298,11 +307,6 @@ class DprListScreen extends ConsumerWidget {
         }
       }
     }
-  }
-              label: const Text('New DPR'),
-            )
-          : null,
-    );
   }
 }
 
@@ -366,136 +370,136 @@ class DprCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  DateFormat('dd MMM yyyy').format(date),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    DateFormat('dd MMM yyyy').format(date),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor().withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _getStatusIcon(),
-                        size: 16,
-                        color: _getStatusColor(),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        dpr.status.toUpperCase(),
-                        style: TextStyle(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor().withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getStatusIcon(),
+                          size: 16,
                           color: _getStatusColor(),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          dpr.status.toUpperCase(),
+                          style: TextStyle(
+                            color: _getStatusColor(),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // Project
+              if (dpr.projectName != null) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.business, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      dpr.projectName!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 8),
               ],
-            ),
-            const SizedBox(height: 12),
-            
-            // Project
-            if (dpr.projectName != null) ...[
+              
+              // Work Description
+              Text(
+                dpr.workDescription,
+                style: Theme.of(context).textTheme.bodyMedium,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              
+              // Photos Count
               Row(
                 children: [
-                  const Icon(Icons.business, size: 16, color: Colors.grey),
+                  Icon(
+                    Icons.photo_camera,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    dpr.projectName!,
+                    '${dpr.photoUrls.length + dpr.localPhotoPaths.length} photos',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  const Spacer(),
+                  if (!dpr.isSynced)
+                    const Row(
+                      children: [
+                        Icon(Icons.sync_disabled, size: 14, color: Colors.orange),
+                        SizedBox(width: 4),
+                        Text(
+                          'Pending sync',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
-              const SizedBox(height: 8),
-            ],
-            
-            // Work Description
-            Text(
-              dpr.workDescription,
-              style: Theme.of(context).textTheme.bodyMedium,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            
-            // Photos Count
-            Row(
-              children: [
-                Icon(
-                  Icons.photo_camera,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${dpr.photoUrls.length + dpr.localPhotoPaths.length} photos',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const Spacer(),
-                if (!dpr.isSynced)
-                  const Row(
-                    children: [
-                      Icon(Icons.sync_disabled, size: 14, color: Colors.orange),
-                      SizedBox(width: 4),
-                      Text(
-                        'Pending sync',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange,
+              
+              // Action buttons for approvers
+              if (isApprover && dpr.status == 'submitted') ...[
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onApprove,
+                        icon: const Icon(Icons.check),
+                        label: const Text('Approve'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onReject,
+                        icon: const Icon(Icons.close),
+                        label: const Text('Reject'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
-            ),
-            
-            // Action buttons for approvers
-            if (isApprover && dpr.status == 'submitted') ...[
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: onApprove,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Approve'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: onReject,
-                      icon: const Icon(Icons.close),
-                      label: const Text('Reject'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
             ],
           ),
         ),

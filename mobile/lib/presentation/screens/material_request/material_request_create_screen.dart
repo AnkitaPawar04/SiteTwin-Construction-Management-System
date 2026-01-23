@@ -343,7 +343,7 @@ class _MaterialRequestCreateScreenState
                   ),
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
-                    final quantity = double.tryParse(value) ?? item.quantity;
+                    final quantity = int.tryParse(value) ?? item.quantity;
                     setState(() {
                       _items[index] = _MaterialRequestItem(
                         material: item.material,
@@ -355,10 +355,10 @@ class _MaterialRequestCreateScreenState
                     if (value == null || value.isEmpty) {
                       return 'Required';
                     }
-                    if (double.tryParse(value) == null) {
+                    if (int.tryParse(value) == null) {
                       return 'Invalid number';
                     }
-                    if (double.parse(value) <= 0) {
+                    if (int.parse(value) <= 0) {
                       return 'Must be > 0';
                     }
                     return null;
@@ -405,7 +405,7 @@ class _MaterialRequestCreateScreenState
 
 class _MaterialRequestItem {
   final MaterialModel material;
-  final double quantity;
+  final int quantity;
 
   _MaterialRequestItem({
     required this.material,

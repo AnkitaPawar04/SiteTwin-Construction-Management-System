@@ -42,12 +42,14 @@ class AuthRepository {
   
   Future<void> logout() async {
     try {
+      AppLogger.info('Sending logout request to ${ApiConstants.logout}');
       await _apiClient.post(ApiConstants.logout);
+      AppLogger.info('Logout request completed successfully');
     } catch (e) {
-      AppLogger.warning('Logout API call failed', e);
+      AppLogger.warning('Logout API call failed: $e');
     } finally {
       await _clearLocalData();
-      AppLogger.info('Logged out successfully');
+      AppLogger.info('Logged out successfully - local data cleared');
     }
   }
 

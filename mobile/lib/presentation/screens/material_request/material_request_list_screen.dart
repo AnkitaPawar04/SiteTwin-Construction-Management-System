@@ -35,9 +35,11 @@ class _MaterialRequestListScreenState
       final user = ref.read(authStateProvider).value;
       
       // Load appropriate requests based on user role
-      if (user?.isEngineer == true || user?.isManager == true || user?.isOwner == true) {
+      if (user?.isManager == true || user?.isOwner == true) {
+        // Managers and owners see pending requests for approval
         _requests = await repository.getPendingRequests();
       } else {
+        // Workers and engineers see only their own requests
         _requests = await repository.getMyRequests();
       }
       

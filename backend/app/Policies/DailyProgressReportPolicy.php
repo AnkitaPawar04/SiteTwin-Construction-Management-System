@@ -30,7 +30,7 @@ class DailyProgressReportPolicy
 
     public function approve(User $user, DailyProgressReport $dpr)
     {
-        return ($user->isManager() || $user->isEngineer()) 
+        return ($user->isOwner() || $user->isManager()) 
             && $user->hasAccessToProject($dpr->project_id);
     }
 }

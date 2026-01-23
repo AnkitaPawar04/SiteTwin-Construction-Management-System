@@ -136,9 +136,32 @@ class DprController extends Controller
     public function pending(Request $request)
     {
         $projectId = $request->query('project_id');
+        $user = $request->user();
         
         $query = DailyProgressReport::where('status', DailyProgressReport::STATUS_SUBMITTED)
             ->with(['project', 'user', 'photos']);
+
+        // Filter by user's accessible projects
+        if ($user->isOwner()) {
+            // Owners can see all DPRs for their owned projects
+            $projectIds = $user->ownedProjects()->pluck('id')->toArray();
+            if (!empty($projectIds)) {
+                $query->whereIn('project_id', $projectIds);
+            } else {
+                $query->whereRaw('1=0'); // No projects, no DPRs
+            }
+        } elseif ($user->isManager()) {
+            // Managers can see all DPRs for their assigned projects
+            $projectIds = $user->projects()->pluck('id')->toArray();
+            if (!empty($projectIds)) {
+                $query->whereIn('project_id', $projectIds);
+            } else {
+                $query->whereRaw('1=0'); // No projects, no DPRs
+            }
+        } else {
+            // Workers/Engineers can only see their own DPRs
+            $query->where('user_id', $user->id);
+        }
 
         if ($projectId) {
             $query->where('project_id', $projectId);

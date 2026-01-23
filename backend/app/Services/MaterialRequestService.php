@@ -83,6 +83,7 @@ class MaterialRequestService
                         : $item->quantity;
                     
                     if ($quantity > 0) {
+                        // Add to project stock - materials are being allocated to project
                         $this->stockService->addStock(
                             $request->project_id,
                             $item->material_id,
@@ -169,7 +170,7 @@ class MaterialRequestService
                     $quantity = intval($quantity);
                     
                     if ($quantity > 0) {
-                        // Add to project stock via stockService
+                        // Add to project stock - materials are being allocated to project
                         $this->stockService->addStock(
                             $request->project_id,
                             $item->material_id,

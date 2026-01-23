@@ -404,6 +404,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Navigator.pop(context); // Close drawer first
                 try {
                   await ref.read(logoutActionProvider.future);
+                  await Future.delayed(const Duration(milliseconds: 500)); // Wait for request to complete
                   if (!context.mounted) return;
                   Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
                 } catch (e) {
