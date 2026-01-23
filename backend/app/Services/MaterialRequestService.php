@@ -113,17 +113,39 @@ class MaterialRequestService
                 throw new \Exception('Material request is not in pending status');
             }
 
-            $request->update([
-                'approved_by' => $approverId,
-                'status' => $status,
-            ]);
+            // Check if this is a partial approval
+            $isPartialApproval = false;
+            if ($status === 'approved' && !empty($allocatedItems)) {
+                foreach ($request->items as $item) {
+                    $quantity = isset($allocatedItems[$item->id]) 
+                        ? $allocatedItems[$item->id] 
+                        : (isset($allocatedItems[(string)$item->id]) 
+                            ? $allocatedItems[(string)$item->id] 
+                            : $item->quantity);
+                    
+                    $quantity = intval($quantity);
+                    if ($quantity < $item->quantity) {
+                        $isPartialApproval = true;
+                        break;
+                    }
+                }
+            }
+
+            // Only update status to approved/rejected if fully approved/rejected
+            // For partial approval, keep status as pending
+            if (!$isPartialApproval) {
+                $request->update([
+                    'approved_by' => $approverId,
+                    'status' => $status,
+                ]);
+            }
 
             // Update approval record
             $approval = Approval::where('reference_type', 'material_request')
                 ->where('reference_id', $requestId)
                 ->first();
 
-            if ($approval) {
+            if ($approval && !$isPartialApproval) {
                 $approval->update([
                     'approved_by' => $approverId,
                     'status' => $status === 'approved' 
@@ -143,10 +165,11 @@ class MaterialRequestService
                             ? $allocatedItems[(string)$item->id] 
                             : $item->quantity);
                     
-                    // Ensure quantity is numeric
-                    $quantity = floatval($quantity);
+                    // Ensure quantity is an integer
+                    $quantity = intval($quantity);
                     
                     if ($quantity > 0) {
+                        // Add to project stock via stockService
                         $this->stockService->addStock(
                             $request->project_id,
                             $item->material_id,
@@ -158,7 +181,9 @@ class MaterialRequestService
             }
 
             // Send notification
-            $message = "Your material request has been " . $status;
+            $message = $isPartialApproval 
+                ? "Your material request has been partially approved. Some items are still pending."
+                : "Your material request has been " . $status;
             if ($remarks) {
                 $message .= ". Remarks: " . $remarks;
             }

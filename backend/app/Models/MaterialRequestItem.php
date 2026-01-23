@@ -17,11 +17,26 @@ class MaterialRequestItem extends Model
         'quantity',
     ];
 
+    protected $appends = [
+        'material_name',
+        'unit',
+    ];
+
     protected function casts(): array
     {
         return [
             'quantity' => 'integer',
         ];
+    }
+
+    public function getMaterialNameAttribute()
+    {
+        return $this->material?->name;
+    }
+
+    public function getUnitAttribute()
+    {
+        return $this->material?->unit;
     }
 
     public function materialRequest()

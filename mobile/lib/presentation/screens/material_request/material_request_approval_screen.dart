@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/material_request_model.dart';
@@ -22,7 +23,7 @@ class _MaterialRequestApprovalScreenState
     extends ConsumerState<MaterialRequestApprovalScreen> {
   bool _isLoading = false;
   final _remarksController = TextEditingController();
-  late final Map<int, double> _allocatedQuantities;
+  late final Map<int, int> _allocatedQuantities;
 
   @override
   void initState() {
@@ -30,9 +31,7 @@ class _MaterialRequestApprovalScreenState
     // Initialize allocated quantities with requested quantities
     _allocatedQuantities = {};
     for (var item in widget.materialRequest.items) {
-      // Ensure quantity is a double for JSON serialization
-      final doubleQty = item.quantity.toDouble();
-      _allocatedQuantities[item.id] = doubleQty;
+      _allocatedQuantities[item.id] = item.quantity;
     }
   }
 
@@ -393,7 +392,7 @@ class _MaterialRequestApprovalScreenState
 /// Quantity Allocation Dialog
 class _QuantityAllocationDialog extends StatefulWidget {
   final List<MaterialRequestItemModel> items;
-  final Map<int, double> allocatedQuantities;
+  final Map<int, int> allocatedQuantities;
 
   const _QuantityAllocationDialog({
     required this.items,
@@ -429,7 +428,7 @@ class _QuantityAllocationDialogState extends State<_QuantityAllocationDialog> {
 
   void _saveAllocations() {
     for (var item in widget.items) {
-      final value = double.tryParse(_controllers[item.id]?.text ?? '0') ?? 0;
+      final value = int.tryParse(_controllers[item.id]?.text ?? '0') ?? 0;
       widget.allocatedQuantities[item.id] = value;
     }
     Navigator.pop(context, true);
@@ -460,7 +459,10 @@ class _QuantityAllocationDialogState extends State<_QuantityAllocationDialog> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: _controllers[item.id],
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                    ],
                     decoration: InputDecoration(
                       hintText: 'Allocate quantity',
                       border: const OutlineInputBorder(),

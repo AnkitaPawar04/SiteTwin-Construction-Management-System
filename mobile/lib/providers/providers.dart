@@ -10,6 +10,7 @@ import 'package:mobile/data/repositories/attendance_repository.dart';
 import 'package:mobile/data/repositories/auth_repository.dart';
 import 'package:mobile/data/repositories/dpr_repository.dart';
 import 'package:mobile/data/repositories/task_repository.dart';
+import 'package:mobile/data/repositories/user_repository.dart';
 import 'package:mobile/data/repositories/material_request_repository.dart';
 import 'package:mobile/data/repositories/stock_repository.dart';
 import 'package:mobile/data/repositories/invoice_repository.dart';
@@ -38,6 +39,13 @@ final dprBoxProvider = Provider<Box<DprModel>>((ref) {
 // Repository Providers
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(apiClientProvider));
+});
+
+final userRepositoryProvider = Provider<UserRepository>((ref) {
+  return UserRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(networkInfoProvider),
+  );
 });
 
 final attendanceRepositoryProvider = Provider<AttendanceRepository>((ref) {

@@ -108,7 +108,7 @@ class MaterialRequestRepository {
     int requestId,
     String status,
     String? remarks, {
-    Map<int, double>? allocatedItems,
+    Map<int, int>? allocatedItems,
   }) async {
     try {
       final requestData = <String, dynamic>{
@@ -120,9 +120,7 @@ class MaterialRequestRepository {
       if (allocatedItems != null && allocatedItems.isNotEmpty) {
         final jsonAllocatedItems = <String, dynamic>{};
         allocatedItems.forEach((itemId, qty) {
-          // Ensure quantity is a proper number type
-          final doubleQty = qty.toDouble();
-          jsonAllocatedItems[itemId.toString()] = doubleQty;
+          jsonAllocatedItems[itemId.toString()] = qty;
         });
         requestData['allocated_items'] = jsonAllocatedItems;
       }

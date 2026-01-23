@@ -9,6 +9,9 @@ class ApiConstants {
   static const String logout = '/logout';
   static const String me = '/me';
   
+  // Users
+  static const String users = '/users';
+  
   // Projects
   static const String projects = '/projects';
   

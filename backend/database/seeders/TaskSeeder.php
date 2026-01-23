@@ -14,8 +14,8 @@ class TaskSeeder extends Seeder
             // Project 1 Tasks
             [
                 'project_id' => 1,
-                'assigned_to' => 7,
-                'assigned_by' => 4,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'Foundation excavation - Block A',
                 'description' => 'Complete excavation work for Block A foundation. Depth: 12 feet.',
                 'status' => 'completed',
@@ -23,8 +23,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 1,
-                'assigned_to' => 8,
-                'assigned_by' => 4,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'Steel reinforcement - Ground floor columns',
                 'description' => 'Install steel bars for all ground floor columns as per structural drawings.',
                 'status' => 'completed',
@@ -32,8 +32,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 1,
-                'assigned_to' => 9,
-                'assigned_by' => 5,
+                'assigned_to' => 4,
+                'assigned_by' => 2,
                 'title' => 'Concrete pouring - Ground floor slab',
                 'description' => 'Pour M25 grade concrete for ground floor slab. Area: 500 sq ft.',
                 'status' => 'in_progress',
@@ -41,8 +41,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 1,
-                'assigned_to' => 10,
-                'assigned_by' => 5,
+                'assigned_to' => 4,
+                'assigned_by' => 2,
                 'title' => 'Brickwork - External walls',
                 'description' => 'Complete external wall brickwork for ground floor using red clay bricks.',
                 'status' => 'in_progress',
@@ -50,8 +50,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 1,
-                'assigned_to' => 11,
-                'assigned_by' => 4,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'Electrical conduit installation - First floor',
                 'description' => 'Install electrical conduits for first floor as per electrical layout.',
                 'status' => 'pending',
@@ -59,8 +59,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 1,
-                'assigned_to' => 12,
-                'assigned_by' => 5,
+                'assigned_to' => 4,
+                'assigned_by' => 2,
                 'title' => 'Plumbing rough-in - Ground floor',
                 'description' => 'Complete plumbing rough-in work for ground floor bathrooms and kitchen.',
                 'status' => 'pending',
@@ -68,8 +68,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 1,
-                'assigned_to' => 13,
-                'assigned_by' => 4,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'Plastering - Interior walls',
                 'description' => 'Apply cement plaster on interior walls. Mix ratio: 1:4.',
                 'status' => 'pending',
@@ -79,8 +79,8 @@ class TaskSeeder extends Seeder
             // Project 2 Tasks
             [
                 'project_id' => 2,
-                'assigned_to' => 17,
-                'assigned_by' => 6,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'Site preparation and leveling',
                 'description' => 'Clear the site and level the ground for construction.',
                 'status' => 'completed',
@@ -88,8 +88,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 2,
-                'assigned_to' => 18,
-                'assigned_by' => 6,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'Foundation marking and layout',
                 'description' => 'Mark foundation layout as per approved plan.',
                 'status' => 'completed',
@@ -97,8 +97,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 2,
-                'assigned_to' => 19,
-                'assigned_by' => 6,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'Foundation excavation - Phase 1',
                 'description' => 'Excavate foundation for Tower A. Depth: 15 feet.',
                 'status' => 'in_progress',
@@ -106,8 +106,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 2,
-                'assigned_to' => 20,
-                'assigned_by' => 6,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'PCC laying - Foundation base',
                 'description' => 'Lay Plain Cement Concrete (PCC) for foundation base.',
                 'status' => 'pending',
@@ -115,8 +115,8 @@ class TaskSeeder extends Seeder
             ],
             [
                 'project_id' => 2,
-                'assigned_to' => 21,
-                'assigned_by' => 6,
+                'assigned_to' => 4,
+                'assigned_by' => 3,
                 'title' => 'Steel fixing - Foundation raft',
                 'description' => 'Fix steel reinforcement for raft foundation.',
                 'status' => 'pending',

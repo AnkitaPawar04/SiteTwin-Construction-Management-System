@@ -25,12 +25,8 @@ class ProjectSeeder extends Seeder
 
         // Assign team to Project 1
         ProjectUser::create(['project_id' => $project1->id, 'user_id' => 2]); // Manager: Amit
-        ProjectUser::create(['project_id' => $project1->id, 'user_id' => 4]); // Engineer: Vikram
-        ProjectUser::create(['project_id' => $project1->id, 'user_id' => 5]); // Engineer: Sneha
-        // Workers
-        for ($i = 7; $i <= 16; $i++) {
-            ProjectUser::create(['project_id' => $project1->id, 'user_id' => $i]);
-        }
+        ProjectUser::create(['project_id' => $project1->id, 'user_id' => 3]); // Engineer: Vikram
+        ProjectUser::create(['project_id' => $project1->id, 'user_id' => 4]); // Worker: Ramu
 
         // Project 2: Residential Tower (Active)
         $project2 = Project::create([
@@ -45,12 +41,9 @@ class ProjectSeeder extends Seeder
         ]);
 
         // Assign team to Project 2
-        ProjectUser::create(['project_id' => $project2->id, 'user_id' => 3]); // Manager: Priya
-        ProjectUser::create(['project_id' => $project2->id, 'user_id' => 6]); // Engineer: Arjun
-        // Workers
-        for ($i = 17; $i <= 21; $i++) {
-            ProjectUser::create(['project_id' => $project2->id, 'user_id' => $i]);
-        }
+        ProjectUser::create(['project_id' => $project2->id, 'user_id' => 2]); // Manager: Amit
+        ProjectUser::create(['project_id' => $project2->id, 'user_id' => 3]); // Engineer: Vikram
+        ProjectUser::create(['project_id' => $project2->id, 'user_id' => 4]); // Worker: Ramu
 
         // Project 3: Villa Complex (Upcoming)
         $project3 = Project::create([
@@ -66,7 +59,8 @@ class ProjectSeeder extends Seeder
 
         // Assign team to Project 3
         ProjectUser::create(['project_id' => $project3->id, 'user_id' => 2]); // Manager: Amit
-        ProjectUser::create(['project_id' => $project3->id, 'user_id' => 4]); // Engineer: Vikram
+        ProjectUser::create(['project_id' => $project3->id, 'user_id' => 3]); // Engineer: Vikram
+        ProjectUser::create(['project_id' => $project3->id, 'user_id' => 4]); // Worker: Ramu
 
         $this->command->info('Created 3 projects with team assignments');
     }

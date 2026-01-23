@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/user_model.dart';
+import 'package:mobile/providers/providers.dart';
+
+// ignore_for_file: unused_result
 
 final usersListProvider = FutureProvider.autoDispose<List<UserModel>>((ref) async {
-  // Assuming there's a method to get all users, otherwise implement via API
+  final repo = ref.watch(userRepositoryProvider);
   try {
-    // This should call an endpoint that returns all users
-    return await Future.value([]);
+    return await repo.getAllUsers();
   } catch (e) {
     return [];
   }
@@ -22,97 +24,95 @@ class UserManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
-  bool _isLoading = false;
-  List<UserModel> _users = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUsers();
-  }
-
-  Future<void> _loadUsers() async {
-    setState(() => _isLoading = true);
-    try {
-      // Load users from backend
-      // For now using a placeholder - implement actual API call
-      // Assuming there will be a method like getAllUsers()
-      setState(() => _users = []);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load users: $e')),
-        );
-      }
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final usersAsync = ref.watch(usersListProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('User Management'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _users.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.people_alt_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No users found',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
+      body: usersAsync.when(
+        data: (users) {
+          if (users.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.people_alt_outlined,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No users found',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreateUserScreen(),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const CreateUserScreen(),
-                            ),
-                          ).then((_) => _loadUsers());
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Create First User'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadUsers,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _users.length,
-                    itemBuilder: (context, index) {
-                      final user = _users[index];
-                      return _UserCard(
-                        user: user,
-                        onEdit: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditUserScreen(user: user),
-                            ),
-                          ).then((_) => _loadUsers());
-                        },
-                        onDelete: () => _showDeleteDialog(user),
-                      );
+                      ).then((_) => ref.refresh(usersListProvider));
                     },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create First User'),
                   ),
-                ),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await ref.refresh(usersListProvider.future);
+            },
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: users.length,
+              itemBuilder: (context, index) {
+                final user = users[index];
+                return _UserCard(
+                  user: user,
+                  onEdit: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditUserScreen(user: user),
+                      ),
+                    ).then((_) => ref.refresh(usersListProvider));
+                  },
+                  onDelete: () => _showDeleteDialog(user),
+                );
+              },
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: $error'),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => ref.refresh(usersListProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -120,7 +120,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             MaterialPageRoute(
               builder: (context) => const CreateUserScreen(),
             ),
-          ).then((_) => _loadUsers());
+          ).then((_) => ref.refresh(usersListProvider));
         },
         child: const Icon(Icons.add),
       ),
@@ -141,7 +141,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _deleteUser(user);
+              await _deleteUser(user, ref);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -150,10 +150,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  Future<void> _deleteUser(UserModel user) async {
-    setState(() => _isLoading = true);
+  Future<void> _deleteUser(UserModel user, WidgetRef ref) async {
     try {
-      // TODO: Implement delete user API call
+      final repo = ref.read(userRepositoryProvider);
+      await repo.deleteUser(user.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -161,7 +161,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             backgroundColor: AppTheme.successColor,
           ),
         );
-        _loadUsers();
+        ref.refresh(usersListProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -172,8 +172,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           ),
         );
       }
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 }
@@ -573,9 +571,15 @@ class _EditUserScreenState extends ConsumerState<EditUserScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement update user API call
-      // Call API to update user with form data
-      // await ref.read(authRepositoryProvider).updateUser(userData);
+      final userRepository = ref.read(userRepositoryProvider);
+      
+      await userRepository.updateUser(
+        widget.user.id,
+        name: _nameController.text,
+        phone: _phoneController.text,
+        email: _emailController.text.isEmpty ? null : _emailController.text,
+        role: _selectedRole,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

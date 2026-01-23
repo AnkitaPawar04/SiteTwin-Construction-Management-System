@@ -15,7 +15,7 @@ class MaterialRequestSeeder extends Seeder
         // Approved Material Requests
         $request1 = MaterialRequest::create([
             'project_id' => 1,
-            'requested_by' => 4, // Engineer Vikram
+            'requested_by' => 3, // Engineer Vikram
             'approved_by' => 2, // Manager Amit
             'status' => 'approved',
             'created_at' => Carbon::now()->subDays(9),
@@ -35,7 +35,7 @@ class MaterialRequestSeeder extends Seeder
 
         $request2 = MaterialRequest::create([
             'project_id' => 1,
-            'requested_by' => 5, // Engineer Sneha
+            'requested_by' => 4, // Worker Ramu
             'approved_by' => 2,
             'status' => 'approved',
             'created_at' => Carbon::now()->subDays(6),
@@ -55,8 +55,8 @@ class MaterialRequestSeeder extends Seeder
 
         $request3 = MaterialRequest::create([
             'project_id' => 2,
-            'requested_by' => 6, // Engineer Arjun
-            'approved_by' => 3, // Manager Priya
+            'requested_by' => 3, // Engineer Vikram
+            'approved_by' => 2, // Manager Amit
             'status' => 'approved',
             'created_at' => Carbon::now()->subDays(7),
         ]);
@@ -68,7 +68,7 @@ class MaterialRequestSeeder extends Seeder
         Approval::create([
             'reference_type' => 'material_request',
             'reference_id' => $request3->id,
-            'approved_by' => 3,
+            'approved_by' => 2,
             'status' => 'approved',
             'created_at' => Carbon::now()->subDays(7)->addHours(3),
         ]);
@@ -76,7 +76,7 @@ class MaterialRequestSeeder extends Seeder
         // Pending Material Requests
         $request4 = MaterialRequest::create([
             'project_id' => 1,
-            'requested_by' => 4,
+            'requested_by' => 3,
             'status' => 'pending',
             'created_at' => Carbon::now()->subDays(2),
         ]);
@@ -94,7 +94,7 @@ class MaterialRequestSeeder extends Seeder
 
         $request5 = MaterialRequest::create([
             'project_id' => 1,
-            'requested_by' => 5,
+            'requested_by' => 4,
             'status' => 'pending',
             'created_at' => Carbon::now()->subDays(1),
         ]);
@@ -112,7 +112,7 @@ class MaterialRequestSeeder extends Seeder
 
         $request6 = MaterialRequest::create([
             'project_id' => 2,
-            'requested_by' => 6,
+            'requested_by' => 3,
             'status' => 'pending',
             'created_at' => Carbon::now(),
         ]);

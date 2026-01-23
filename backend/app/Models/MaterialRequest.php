@@ -22,11 +22,26 @@ class MaterialRequest extends Model
         'status',
     ];
 
+    protected $appends = [
+        'project_name',
+        'requested_by_name',
+    ];
+
     protected function casts(): array
     {
         return [
             'created_at' => 'datetime',
         ];
+    }
+
+    public function getProjectNameAttribute()
+    {
+        return $this->project?->name;
+    }
+
+    public function getRequestedByNameAttribute()
+    {
+        return $this->requestedBy?->name;
     }
 
     public function project()

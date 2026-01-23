@@ -23,7 +23,7 @@ class _MaterialRequestAllocationScreenState
     extends ConsumerState<MaterialRequestAllocationScreen> {
   bool _isLoading = false;
   final _remarksController = TextEditingController();
-  late final Map<int, double> _allocatedQuantities;
+  late final Map<int, int> _allocatedQuantities;
   late final Map<int, TextEditingController> _quantityControllers;
 
   @override
@@ -34,10 +34,9 @@ class _MaterialRequestAllocationScreenState
     _quantityControllers = {};
     
     for (var item in widget.materialRequest.items) {
-      final doubleQty = item.quantity.toDouble();
-      _allocatedQuantities[item.id] = doubleQty;
+      _allocatedQuantities[item.id] = item.quantity;
       _quantityControllers[item.id] = TextEditingController(
-        text: doubleQty.toString(),
+        text: item.quantity.toString(),
       );
     }
   }
@@ -54,7 +53,7 @@ class _MaterialRequestAllocationScreenState
   Future<void> _submitAllocation(bool approve) async {
     // Update allocated quantities from controllers
     for (var item in widget.materialRequest.items) {
-      final value = double.tryParse(_quantityControllers[item.id]?.text ?? '0');
+      final value = int.tryParse(_quantityControllers[item.id]?.text ?? '0');
       if (value != null) {
         _allocatedQuantities[item.id] = value;
       }
@@ -413,10 +412,9 @@ class _MaterialRequestAllocationScreenState
             // Allocation Input Field
             TextFormField(
               controller: _quantityControllers[item.id],
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: false),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
               ],
               decoration: InputDecoration(
                 labelText: 'Allocate Quantity',
@@ -430,7 +428,7 @@ class _MaterialRequestAllocationScreenState
                 ),
               ),
               onChanged: (value) {
-                final parsed = double.tryParse(value);
+                final parsed = int.tryParse(value);
                 if (parsed != null) {
                   _allocatedQuantities[item.id] = parsed;
                 }
