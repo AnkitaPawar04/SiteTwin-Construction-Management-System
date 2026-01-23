@@ -137,14 +137,14 @@ class DprController extends Controller
     {
         $projectId = $request->query('project_id');
         $user = $request->user();
-        
+
         $query = DailyProgressReport::where('status', DailyProgressReport::STATUS_SUBMITTED)
             ->with(['project', 'user', 'photos']);
 
         // Filter by user's accessible projects
         if ($user->isOwner()) {
             // Owners can see all DPRs for their owned projects
-            $projectIds = $user->ownedProjects()->pluck('id')->toArray();
+            $projectIds = $user->ownedProjects()->pluck('projects.id')->toArray();
             if (!empty($projectIds)) {
                 $query->whereIn('project_id', $projectIds);
             } else {
@@ -152,7 +152,7 @@ class DprController extends Controller
             }
         } elseif ($user->isManager()) {
             // Managers can see all DPRs for their assigned projects
-            $projectIds = $user->projects()->pluck('id')->toArray();
+            $projectIds = $user->projects()->pluck('projects.id')->toArray();
             if (!empty($projectIds)) {
                 $query->whereIn('project_id', $projectIds);
             } else {
@@ -180,9 +180,9 @@ class DprController extends Controller
         try {
             $dpr = DailyProgressReport::findOrFail($dprId);
             $photo = $dpr->photos()->where('id', $photoId)->firstOrFail();
-            
+
             $filePath = storage_path('app/public/' . $photo->photo_url);
-            
+
             if (!file_exists($filePath)) {
                 return response()->json([
                     'success' => false,

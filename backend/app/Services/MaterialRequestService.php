@@ -47,9 +47,9 @@ class MaterialRequestService
         });
     }
 
-    public function approveMaterialRequest($requestId, $approverId, $status, $allocatedItems = [])
+    public function approveMaterialRequest($requestId, $approverId, $status)
     {
-        return DB::transaction(function () use ($requestId, $approverId, $status, $allocatedItems) {
+        return DB::transaction(function () use ($requestId, $approverId, $status) {
             $request = MaterialRequest::findOrFail($requestId);
 
             if ($request->status !== MaterialRequest::STATUS_PENDING) {
@@ -69,29 +69,10 @@ class MaterialRequestService
             if ($approval) {
                 $approval->update([
                     'approved_by' => $approverId,
-                    'status' => $status === MaterialRequest::STATUS_APPROVED 
-                        ? Approval::STATUS_APPROVED 
+                    'status' => $status === MaterialRequest::STATUS_APPROVED
+                        ? Approval::STATUS_APPROVED
                         : Approval::STATUS_REJECTED,
                 ]);
-            }
-
-            // If approved, update stock with allocated quantities
-            if ($status === MaterialRequest::STATUS_APPROVED) {
-                foreach ($request->items as $item) {
-                    $quantity = isset($allocatedItems[$item->id]) 
-                        ? $allocatedItems[$item->id] 
-                        : $item->quantity;
-                    
-                    if ($quantity > 0) {
-                        // Add to project stock - materials are being allocated to project
-                        $this->stockService->addStock(
-                            $request->project_id,
-                            $item->material_id,
-                            $quantity,
-                            $request->id
-                        );
-                    }
-                }
             }
 
             // Send notification
@@ -100,6 +81,42 @@ class MaterialRequestService
                 'message' => "Your material request has been " . $status,
                 'is_read' => false,
             ]);
+
+            return $request->load('items.material');
+        });
+    }
+
+    public function receiveMaterialRequest($requestId, array $receivedItems)
+    {
+        return DB::transaction(function () use ($requestId, $receivedItems) {
+            $request = MaterialRequest::findOrFail($requestId);
+
+            if ($request->status !== MaterialRequest::STATUS_APPROVED) {
+                throw new \Exception('Material request must be approved before receiving it');
+            }
+
+            foreach ($request->items as $item) {
+                // Check if this item's reception is reported
+                $receivedQuantity = isset($receivedItems[$item->id])
+                    ? $receivedItems[$item->id]
+                    : (isset($receivedItems[(string) $item->id])
+                        ? $receivedItems[(string) $item->id]
+                        : 0);
+
+                $receivedQuantity = intval($receivedQuantity);
+
+                if ($receivedQuantity > 0) {
+                    // This is where Stock IN happens linked to the request
+                    $this->stockService->addStock(
+                        $request->project_id,
+                        $item->material_id,
+                        $receivedQuantity,
+                        $request->id
+                    );
+                }
+            }
+
+            $request->update(['status' => MaterialRequest::STATUS_RECEIVED]);
 
             return $request->load('items.material');
         });
@@ -118,12 +135,12 @@ class MaterialRequestService
             $isPartialApproval = false;
             if ($status === 'approved' && !empty($allocatedItems)) {
                 foreach ($request->items as $item) {
-                    $quantity = isset($allocatedItems[$item->id]) 
-                        ? $allocatedItems[$item->id] 
-                        : (isset($allocatedItems[(string)$item->id]) 
-                            ? $allocatedItems[(string)$item->id] 
+                    $quantity = isset($allocatedItems[$item->id])
+                        ? $allocatedItems[$item->id]
+                        : (isset($allocatedItems[(string) $item->id])
+                            ? $allocatedItems[(string) $item->id]
                             : $item->quantity);
-                    
+
                     $quantity = intval($quantity);
                     if ($quantity < $item->quantity) {
                         $isPartialApproval = true;
@@ -149,40 +166,15 @@ class MaterialRequestService
             if ($approval && !$isPartialApproval) {
                 $approval->update([
                     'approved_by' => $approverId,
-                    'status' => $status === 'approved' 
-                        ? Approval::STATUS_APPROVED 
+                    'status' => $status === 'approved'
+                        ? Approval::STATUS_APPROVED
                         : Approval::STATUS_REJECTED,
                     'remarks' => $remarks,
                 ]);
             }
 
-            // If approved, update stock with allocated quantities
-            if ($status === 'approved') {
-                foreach ($request->items as $item) {
-                    // Check for both numeric and string keys due to JSON encoding
-                    $quantity = isset($allocatedItems[$item->id]) 
-                        ? $allocatedItems[$item->id] 
-                        : (isset($allocatedItems[(string)$item->id]) 
-                            ? $allocatedItems[(string)$item->id] 
-                            : $item->quantity);
-                    
-                    // Ensure quantity is an integer
-                    $quantity = intval($quantity);
-                    
-                    if ($quantity > 0) {
-                        // Add to project stock - materials are being allocated to project
-                        $this->stockService->addStock(
-                            $request->project_id,
-                            $item->material_id,
-                            $quantity,
-                            $request->id
-                        );
-                    }
-                }
-            }
-
             // Send notification
-            $message = $isPartialApproval 
+            $message = $isPartialApproval
                 ? "Your material request has been partially approved. Some items are still pending."
                 : "Your material request has been " . $status;
             if ($remarks) {

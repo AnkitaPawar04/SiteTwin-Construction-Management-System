@@ -22,6 +22,8 @@ class Task extends Model
         'title',
         'description',
         'status',
+        'billing_amount',
+        'gst_percentage',
     ];
 
     protected function casts(): array

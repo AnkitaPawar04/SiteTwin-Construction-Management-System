@@ -150,7 +150,7 @@ class MaterialRequestController extends Controller
         }
 
         $projectId = $request->query('project_id');
-        
+
         $query = MaterialRequest::where('status', MaterialRequest::STATUS_PENDING)
             ->with(['items.material', 'project', 'requestedBy']);
 
@@ -164,5 +164,40 @@ class MaterialRequestController extends Controller
             'success' => true,
             'data' => $requests
         ]);
+    }
+    public function receive(Request $request, $id)
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*' => 'required|integer|min:0'
+        ]);
+
+        $materialRequest = MaterialRequest::findOrFail($id);
+
+        // Only engineers or managers can confirm reception
+        if (!$request->user()->isEngineer() && !$request->user()->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access'
+            ], 403);
+        }
+
+        try {
+            $materialRequest = $this->materialRequestService->receiveMaterialRequest(
+                $id,
+                $request->items
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Material received and added to stock successfully',
+                'data' => $materialRequest
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
     }
 }

@@ -23,6 +23,8 @@ class DailyProgressReport extends Model
         'latitude',
         'longitude',
         'status',
+        'billing_amount',
+        'gst_percentage',
     ];
 
     protected function casts(): array

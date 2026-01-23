@@ -49,6 +49,7 @@ class StockRepository {
       'project_id': projectId,
       'material_id': materialId,
       'quantity': quantity,
+      'type': 'in',
       if (referenceId != null) 'reference_id': referenceId,
     });
     return StockModel.fromJson(response.data['data']);
@@ -64,6 +65,7 @@ class StockRepository {
       'project_id': projectId,
       'material_id': materialId,
       'quantity': quantity,
+      'type': 'out',
       if (referenceId != null) 'reference_id': referenceId,
     });
     return StockModel.fromJson(response.data['data']);

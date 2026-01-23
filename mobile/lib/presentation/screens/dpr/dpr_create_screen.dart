@@ -25,6 +25,8 @@ class DprCreateScreen extends ConsumerStatefulWidget {
 class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   final _workDescriptionController = TextEditingController();
+  final _billingAmountController = TextEditingController();
+  final _gstPercentageController = TextEditingController(text: '18');
   final List<String> _photoPaths = [];
   final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
@@ -33,6 +35,8 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   @override
   void dispose() {
     _workDescriptionController.dispose();
+    _billingAmountController.dispose();
+    _gstPercentageController.dispose();
     super.dispose();
   }
   
@@ -146,6 +150,8 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
         latitude: position.latitude,
         longitude: position.longitude,
         photoPaths: _photoPaths,
+        billingAmount: double.tryParse(_billingAmountController.text),
+        gstPercentage: double.tryParse(_gstPercentageController.text),
       );
       
       if (mounted) {
@@ -276,6 +282,65 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
                         }
                         return null;
                       },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Billing Information Section
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Billing Information (for Auto-GST Bill)',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextFormField(
+                            controller: _billingAmountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Billing Amount (₹)',
+                              hintText: 'e.g. 50000',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                if (double.tryParse(value) == null) return 'Enter a valid number';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 1,
+                          child: TextFormField(
+                            controller: _gstPercentageController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'GST %',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'If entered, an official GST bill will be generated upon approval.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
                     ),
                   ],
                 ),

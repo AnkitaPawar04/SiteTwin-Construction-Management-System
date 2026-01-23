@@ -52,6 +52,40 @@ class InvoiceService
         });
     }
 
+    public function generateInvoiceFromDpr($dpr)
+    {
+        if (!$dpr->billing_amount || $dpr->billing_amount <= 0) {
+            return null;
+        }
+
+        $items = [
+            [
+                'description' => "Work completed as per DPR dated " . ($dpr->report_date?->format('d M Y') ?? date('d M Y')),
+                'amount' => $dpr->billing_amount,
+                'gst_percentage' => $dpr->gst_percentage ?? 18.00,
+            ]
+        ];
+
+        return $this->generateInvoice($dpr->project_id, $items);
+    }
+
+    public function generateInvoiceFromTask($task)
+    {
+        if (!$task->billing_amount || $task->billing_amount <= 0) {
+            return null;
+        }
+
+        $items = [
+            [
+                'description' => "Task completed: " . $task->title,
+                'amount' => $task->billing_amount,
+                'gst_percentage' => $task->gst_percentage ?? 18.00,
+            ]
+        ];
+
+        return $this->generateInvoice($task->project_id, $items);
+    }
+
     public function markAsPaid($invoiceId)
     {
         $invoice = Invoice::findOrFail($invoiceId);

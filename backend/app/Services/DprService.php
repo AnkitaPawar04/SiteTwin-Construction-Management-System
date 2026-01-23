@@ -12,6 +12,12 @@ use Carbon\Carbon;
 
 class DprService
 {
+    private $invoiceService;
+
+    public function __construct(InvoiceService $invoiceService)
+    {
+        $this->invoiceService = $invoiceService;
+    }
     public function createDpr($userId, $projectId, $workDescription, $latitude, $longitude, $photos = [])
     {
         return DB::transaction(function () use ($userId, $projectId, $workDescription, $latitude, $longitude, $photos) {
@@ -30,10 +36,10 @@ class DprService
                 foreach ($photos as $photo) {
                     // Generate unique filename with proper naming convention
                     $fileName = $this->generatePhotoFileName($dpr->id, $photo);
-                    
+
                     // Store the file in public disk (accessible via HTTP)
                     $path = $photo->store("dprs/project_{$projectId}/dpr_{$dpr->id}", 'public');
-                    
+
                     // Save the file path to database
                     DprPhoto::create([
                         'dpr_id' => $dpr->id,
@@ -62,7 +68,7 @@ class DprService
         $timestamp = time();
         $random = mt_rand(1000, 9999);
         $extension = $photoFile->getClientOriginalExtension();
-        
+
         return "dpr_{$dprId}_{$timestamp}_{$random}.{$extension}";
     }
 
@@ -85,8 +91,8 @@ class DprService
             if ($approval) {
                 $approval->update([
                     'approved_by' => $approverId,
-                    'status' => $status === DailyProgressReport::STATUS_APPROVED 
-                        ? Approval::STATUS_APPROVED 
+                    'status' => $status === DailyProgressReport::STATUS_APPROVED
+                        ? Approval::STATUS_APPROVED
                         : Approval::STATUS_REJECTED,
                 ]);
             }
@@ -94,9 +100,14 @@ class DprService
             // Send notification to DPR creator
             Notification::create([
                 'user_id' => $dpr->user_id,
-                'message' => "Your DPR for " . $dpr->report_date->format('d M Y') . " has been " . $status,
+                'message' => "Your DPR for " . \Carbon\Carbon::parse($dpr->report_date)->format('d M Y') . " has been " . $status,
                 'is_read' => false,
             ]);
+
+            // Trigger auto-invoice generation if approved
+            if ($status === DailyProgressReport::STATUS_APPROVED) {
+                $this->invoiceService->generateInvoiceFromDpr($dpr);
+            }
 
             return $dpr;
         });
@@ -121,17 +132,22 @@ class DprService
             if ($approval) {
                 $approval->update([
                     'approved_by' => $approverId,
-                    'status' => $status === 'approved' 
-                        ? Approval::STATUS_APPROVED 
+                    'status' => $status === 'approved'
+                        ? Approval::STATUS_APPROVED
                         : Approval::STATUS_REJECTED,
                     'remarks' => $remarks,
                 ]);
             }
 
             // Send notification to DPR creator
-            $message = "Your DPR for " . $dpr->report_date->format('d M Y') . " has been " . $status;
+            $message = "Your DPR for " . \Carbon\Carbon::parse($dpr->report_date)->format('d M Y') . " has been " . $status;
             if ($remarks) {
                 $message .= ". Remarks: " . $remarks;
+            }
+
+            // Trigger auto-invoice generation if approved
+            if ($status === 'approved' || $status === DailyProgressReport::STATUS_APPROVED) {
+                $this->invoiceService->generateInvoiceFromDpr($dpr);
             }
 
             Notification::create([

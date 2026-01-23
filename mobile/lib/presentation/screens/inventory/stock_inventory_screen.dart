@@ -5,6 +5,7 @@ import 'package:mobile/data/models/stock_model.dart';
 import 'package:mobile/data/models/stock_transaction_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile/presentation/screens/inventory/record_usage_screen.dart';
 
 // Providers
 final stockProvider = FutureProvider.autoDispose<List<StockModel>>((ref) async {
@@ -60,6 +61,21 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
           _buildStockList(),
           _buildTransactionsList(),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const RecordUsageScreen()),
+          );
+          if (result == true) {
+            ref.invalidate(stockProvider);
+            ref.invalidate(stockTransactionsProvider);
+          }
+        },
+        label: const Text('Record Usage'),
+        icon: const Icon(Icons.remove_circle_outline),
+        backgroundColor: Colors.red[700],
       ),
     );
   }

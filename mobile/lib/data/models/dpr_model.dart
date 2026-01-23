@@ -44,6 +44,12 @@ class DprModel extends HiveObject {
   @HiveField(12)
   final String? projectName;
   
+  @HiveField(13)
+  final double? billingAmount;
+  
+  @HiveField(14)
+  final double? gstPercentage;
+  
   DprModel({
     this.id,
     required this.projectId,
@@ -55,9 +61,11 @@ class DprModel extends HiveObject {
     required this.status,
     this.photoUrls = const [],
     this.localPhotoPaths = const [],
-    this.isSynced = false,
+     this.isSynced = false,
     this.localId,
     this.projectName,
+    this.billingAmount,
+    this.gstPercentage,
   });
   
   factory DprModel.fromJson(Map<String, dynamic> json) {
@@ -95,6 +103,8 @@ class DprModel extends HiveObject {
       photoUrls: photoUrls,
       isSynced: true,
       projectName: json['project']?['name'],
+      billingAmount: json['billing_amount'] != null ? double.tryParse(json['billing_amount'].toString()) : null,
+      gstPercentage: json['gst_percentage'] != null ? double.tryParse(json['gst_percentage'].toString()) : null,
     );
   }
   
@@ -108,6 +118,8 @@ class DprModel extends HiveObject {
       'latitude': latitude,
       'longitude': longitude,
       'status': status,
+      'billing_amount': billingAmount,
+      'gst_percentage': gstPercentage,
     };
   }
 }

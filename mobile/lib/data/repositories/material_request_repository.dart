@@ -135,4 +135,23 @@ class MaterialRequestRepository {
       rethrow;
     }
   }
+
+  // Receive material request (mark as physically received and add to stock)
+  Future<void> receiveRequest(int requestId, Map<int, int> receivedItems) async {
+    try {
+      final jsonReceivedItems = <String, dynamic>{};
+      receivedItems.forEach((itemId, qty) {
+        jsonReceivedItems[itemId.toString()] = qty;
+      });
+
+      await _apiClient.post(
+        '${ApiConstants.materialRequests}/$requestId/receive',
+        data: {'items': jsonReceivedItems},
+      );
+      AppLogger.info('Material request marked as received');
+    } catch (e) {
+      AppLogger.error('Failed to receive material request', e);
+      rethrow;
+    }
+  }
 }

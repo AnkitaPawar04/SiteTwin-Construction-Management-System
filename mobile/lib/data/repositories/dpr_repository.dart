@@ -26,6 +26,8 @@ class DprRepository {
     required double latitude,
     required double longitude,
     required List<String> photoPaths,
+    double? billingAmount,
+    double? gstPercentage,
   }) async {
     final date = DateTime.now().toIso8601String().split('T')[0];
     final isOnline = await _networkInfo.isConnected;
@@ -39,6 +41,8 @@ class DprRepository {
           'report_date': date,
           'latitude': latitude,
           'longitude': longitude,
+          'billing_amount': billingAmount,
+          'gst_percentage': gstPercentage,
         });
         
         // Add photos as multipart files
@@ -78,6 +82,8 @@ class DprRepository {
         localPhotoPaths: photoPaths,
         isSynced: false,
         localId: localId,
+        billingAmount: billingAmount,
+        gstPercentage: gstPercentage,
       );
       
       await _dprBox.put(localId, dpr);
@@ -176,6 +182,8 @@ class DprRepository {
           'report_date': dpr.reportDate,
           'latitude': dpr.latitude,
           'longitude': dpr.longitude,
+          'billing_amount': dpr.billingAmount,
+          'gst_percentage': dpr.gstPercentage,
         });
         
         // Add local photos

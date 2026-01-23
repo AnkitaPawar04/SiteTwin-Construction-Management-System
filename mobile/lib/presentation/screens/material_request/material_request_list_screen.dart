@@ -7,6 +7,7 @@ import 'package:mobile/providers/providers.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_create_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_approval_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_allocation_screen.dart';
+import 'package:mobile/presentation/screens/material_request/material_request_receive_screen.dart';
 
 class MaterialRequestListScreen extends ConsumerStatefulWidget {
   const MaterialRequestListScreen({super.key});
@@ -84,6 +85,25 @@ class _MaterialRequestListScreenState
     }
   }
 
+  Future<void> _navigateToReceive(BuildContext context, MaterialRequestModel request) async {
+    if (!mounted) return;
+    
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            MaterialRequestReceiveScreen(
+              materialRequest: request,
+            ),
+      ),
+    );
+    
+    if (!mounted) return;
+    if (result == true) {
+      _loadRequests();
+    }
+  }
+
 
 
   @override
@@ -136,8 +156,11 @@ class _MaterialRequestListScreenState
                         request: request,
                         canApprove: canApprove,
                         isOwner: isOwner,
-                        onTap: canApprove
+                        onTap: canApprove && request.status == 'pending'
                             ? () => _navigateToDetails(context, request, isOwner)
+                            : null,
+                        onReceive: (request.status == 'approved' && !isOwner)
+                            ? () => _navigateToReceive(context, request)
                             : null,
                       );
                     },
@@ -168,12 +191,14 @@ class _MaterialRequestCard extends StatelessWidget {
   final bool canApprove;
   final bool isOwner;
   final VoidCallback? onTap;
+  final VoidCallback? onReceive;
 
   const _MaterialRequestCard({
     required this.request,
     required this.canApprove,
     this.isOwner = false,
     this.onTap,
+    this.onReceive,
   });
 
   Color _getStatusColor() {
@@ -182,6 +207,8 @@ class _MaterialRequestCard extends StatelessWidget {
         return AppTheme.successColor;
       case 'rejected':
         return AppTheme.errorColor;
+      case 'received':
+        return Colors.blue;
       default:
         return AppTheme.warningColor;
     }
@@ -193,6 +220,8 @@ class _MaterialRequestCard extends StatelessWidget {
         return Icons.check_circle;
       case 'rejected':
         return Icons.cancel;
+      case 'received':
+        return Icons.inventory;
       default:
         return Icons.pending;
     }
@@ -354,6 +383,41 @@ class _MaterialRequestCard extends StatelessWidget {
                   color: Colors.blue[600],
                   fontStyle: FontStyle.italic,
                 ),
+              ),
+            ],
+            if (onReceive != null) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onReceive,
+                  icon: const Icon(Icons.download_for_offline),
+                  label: const Text('REPORT PHYSICAL ARRIVAL'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[700],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (request.status == 'received') ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                   Icon(Icons.check_circle, color: Colors.green, size: 16),
+                   SizedBox(width: 8),
+                   Text(
+                     'Materials physically arrived on site',
+                     style: TextStyle(color: Colors.green, fontSize: 13, fontWeight: FontWeight.bold),
+                   ),
+                ],
               ),
             ],
             ],
