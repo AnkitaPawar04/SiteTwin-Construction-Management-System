@@ -23,18 +23,21 @@ class AttendanceModelAdapter extends TypeAdapter<AttendanceModel> {
       date: fields[3] as String,
       checkIn: fields[4] as String?,
       checkOut: fields[5] as String?,
-      latitude: fields[6] as double,
-      longitude: fields[7] as double,
-      isVerified: fields[8] as bool,
-      isSynced: fields[9] as bool,
-      localId: fields[10] as String?,
+      markedLatitude: fields[6] as double,
+      markedLongitude: fields[7] as double,
+      distanceFromGeofence: fields[8] as int?,
+      isWithinGeofence: fields[9] as bool,
+      isVerified: fields[10] as bool,
+      isSynced: fields[11] as bool,
+      localId: fields[12] as String?,
+      userName: fields[13] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, AttendanceModel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -48,15 +51,21 @@ class AttendanceModelAdapter extends TypeAdapter<AttendanceModel> {
       ..writeByte(5)
       ..write(obj.checkOut)
       ..writeByte(6)
-      ..write(obj.latitude)
+      ..write(obj.markedLatitude)
       ..writeByte(7)
-      ..write(obj.longitude)
+      ..write(obj.markedLongitude)
       ..writeByte(8)
-      ..write(obj.isVerified)
+      ..write(obj.distanceFromGeofence)
       ..writeByte(9)
-      ..write(obj.isSynced)
+      ..write(obj.isWithinGeofence)
       ..writeByte(10)
-      ..write(obj.localId);
+      ..write(obj.isVerified)
+      ..writeByte(11)
+      ..write(obj.isSynced)
+      ..writeByte(12)
+      ..write(obj.localId)
+      ..writeByte(13)
+      ..write(obj.userName);
   }
 
   @override

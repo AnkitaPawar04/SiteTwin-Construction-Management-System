@@ -14,8 +14,10 @@ class Project extends Model
     protected $fillable = [
         'name',
         'location',
+        'description',
         'latitude',
         'longitude',
+        'geofence_radius_meters',
         'start_date',
         'end_date',
         'owner_id',

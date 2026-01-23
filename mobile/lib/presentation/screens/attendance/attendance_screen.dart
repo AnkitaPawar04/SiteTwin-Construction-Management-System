@@ -7,7 +7,7 @@ import 'package:mobile/data/models/attendance_model.dart';
 import 'package:mobile/data/models/project_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:mobile/providers/auth_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:mobile/services/location_service.dart';
 
 final projectsProvider = FutureProvider.autoDispose<List<ProjectModel>>((ref) async {
   final repo = ref.watch(dprRepositoryProvider);
@@ -29,26 +29,11 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _isLoading = false;
   int? _selectedProjectId;
+  final _locationService = LocationService();
   
   Future<Position?> _getCurrentLocation() async {
     try {
-      // Request location permission
-      final permission = await Permission.location.request();
-      if (!permission.isGranted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permission is required')),
-          );
-        }
-        return null;
-      }
-      
-      // Get current position
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
+      return await _locationService.getCurrentLocation();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -95,6 +80,48 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final position = await _getCurrentLocation();
       if (position == null) return;
       
+      // Get the selected project to check geofence
+      final projectsAsync = ref.read(projectsProvider);
+      final projects = projectsAsync.value ?? [];
+      final selectedProject = projects.firstWhere(
+        (p) => p.id == _selectedProjectId,
+        orElse: () => ProjectModel(
+          id: 0,
+          name: '',
+          location: '',
+          latitude: 0,
+          longitude: 0,
+          startDate: '',
+          endDate: '',
+          ownerId: 0,
+        ),
+      );
+      
+      // Check if within geofence
+      final geofenceCheck = _locationService.isWithinGeofence(
+        position.latitude,
+        position.longitude,
+        selectedProject.latitude,
+        selectedProject.longitude,
+        selectedProject.geofenceRadiusMeters,
+      );
+      
+      if (!geofenceCheck['is_within']) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'You are outside the geofence area.\nDistance from project: ${geofenceCheck['distance']}m\nAllowed radius: ${selectedProject.geofenceRadiusMeters}m',
+              ),
+              backgroundColor: AppTheme.errorColor,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+      
       final repo = ref.read(attendanceRepositoryProvider);
       await repo.checkIn(
         projectId: _selectedProjectId!,
@@ -106,8 +133,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Check-in successful'),
+          SnackBar(
+            content: Text(
+              'Check-in successful!\nDistance from project: ${geofenceCheck['distance']}m',
+            ),
             backgroundColor: AppTheme.successColor,
           ),
         );

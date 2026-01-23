@@ -20,6 +20,7 @@ class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _locationController;
+  late TextEditingController _geofenceRadiusController;
   late MapController _mapController;
   
   late LatLng _selectedLocation;
@@ -33,6 +34,7 @@ class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.project.name);
     _locationController = TextEditingController(text: widget.project.location);
+    _geofenceRadiusController = TextEditingController(text: widget.project.geofenceRadiusMeters.toString());
     _mapController = MapController();
     _selectedLocation = LatLng(widget.project.latitude, widget.project.longitude);
     _startDate = DateTime.parse(widget.project.startDate);
@@ -43,6 +45,7 @@ class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
   void dispose() {
     _nameController.dispose();
     _locationController.dispose();
+    _geofenceRadiusController.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -115,6 +118,7 @@ class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
         'location': _locationController.text.trim(),
         'latitude': _selectedLocation.latitude,
         'longitude': _selectedLocation.longitude,
+        'geofence_radius_meters': int.tryParse(_geofenceRadiusController.text) ?? 100,
         'start_date': _startDate.toIso8601String().split('T')[0],
         'end_date': _endDate.toIso8601String().split('T')[0],
       });
@@ -190,6 +194,51 @@ class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
               }
               return null;
             },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _geofenceRadiusController,
+            decoration: InputDecoration(
+              labelText: 'Geofence Radius (meters)',
+              prefixIcon: const Icon(Icons.location_on_outlined),
+              suffixText: 'meters',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            keyboardType: TextInputType.number,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter geofence radius';
+              }
+              final radius = int.tryParse(value);
+              if (radius == null || radius < 10) {
+                return 'Radius must be at least 10 meters';
+              }
+              if (radius > 5000) {
+                return 'Radius cannot exceed 5000 meters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Workers can only mark attendance within ${_geofenceRadiusController.text}m of project location',
+                    style: const TextStyle(fontSize: 12, color: Colors.blue),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           Container(

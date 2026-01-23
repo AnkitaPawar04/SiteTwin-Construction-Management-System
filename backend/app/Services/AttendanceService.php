@@ -3,11 +3,19 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\Project;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AttendanceService
 {
+    private $geofenceService;
+
+    public function __construct()
+    {
+        $this->geofenceService = new GeofenceService();
+    }
+
     public function checkIn($userId, $projectId, $latitude, $longitude)
     {
         $today = Carbon::today()->toDateString();
@@ -22,17 +30,38 @@ class AttendanceService
             throw new \Exception('Attendance already marked for today');
         }
 
-        // Validate location (simplified - you can add more complex validation)
-        // In production, check if coordinates are within project boundaries
+        // Get project and validate geofence
+        $project = Project::findOrFail($projectId);
+        
+        // If project has geofence enabled (has coordinates)
+        if ($project->latitude && $project->longitude) {
+            $geofenceCheck = $this->geofenceService->isWithinGeofence(
+                $latitude,
+                $longitude,
+                $project->latitude,
+                $project->longitude,
+                $project->geofence_radius_meters
+            );
+
+            if (!$geofenceCheck['is_within']) {
+                throw new \Exception(
+                    'You are outside the geofence area. Distance from project: ' . 
+                    $geofenceCheck['distance'] . 'm (Allowed radius: ' . 
+                    $project->geofence_radius_meters . 'm)'
+                );
+            }
+        }
 
         $attendance = Attendance::create([
             'user_id' => $userId,
             'project_id' => $projectId,
             'date' => $today,
             'check_in' => now(),
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'is_verified' => true, // Auto-verify or add manual verification
+            'marked_latitude' => $latitude,
+            'marked_longitude' => $longitude,
+            'distance_from_geofence' => isset($geofenceCheck) ? $geofenceCheck['distance'] : null,
+            'is_within_geofence' => isset($geofenceCheck) ? $geofenceCheck['is_within'] : true,
+            'is_verified' => true,
         ]);
 
         return $attendance;

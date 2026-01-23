@@ -33,8 +33,8 @@ class AttendanceRepository {
         userId: 0,
         projectId: 0,
         date: '',
-        latitude: 0,
-        longitude: 0,
+        markedLatitude: 0,
+        markedLongitude: 0,
       ),
     );
     
@@ -77,8 +77,8 @@ class AttendanceRepository {
         projectId: projectId,
         date: date,
         checkIn: checkIn,
-        latitude: latitude,
-        longitude: longitude,
+        markedLatitude: latitude,
+        markedLongitude: longitude,
         isSynced: false,
         localId: localId,
       );
@@ -124,8 +124,8 @@ class AttendanceRepository {
           date: localAttendance.date,
           checkIn: localAttendance.checkIn,
           checkOut: DateTime.now().toIso8601String(),
-          latitude: latitude,
-          longitude: longitude,
+          markedLatitude: latitude,
+          markedLongitude: longitude,
           isSynced: false,
           localId: localAttendance.localId,
         );
@@ -279,8 +279,8 @@ class AttendanceRepository {
           final response = await _apiClient.post(
             ApiConstants.attendanceCheckOut,
             data: {
-              'latitude': attendance.latitude,
-              'longitude': attendance.longitude,
+              'marked_latitude': attendance.markedLatitude,
+              'marked_longitude': attendance.markedLongitude,
             },
           );
           final synced = AttendanceModel.fromJson(response.data['data']);

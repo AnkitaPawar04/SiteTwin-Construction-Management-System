@@ -23,21 +23,27 @@ class AttendanceModel extends HiveObject {
   final String? checkOut;
   
   @HiveField(6)
-  final double latitude;
+  final double markedLatitude;
   
   @HiveField(7)
-  final double longitude;
+  final double markedLongitude;
   
   @HiveField(8)
-  final bool isVerified;
+  final int? distanceFromGeofence;
   
   @HiveField(9)
-  final bool isSynced;
+  final bool isWithinGeofence;
   
   @HiveField(10)
-  final String? localId;
+  final bool isVerified;
   
   @HiveField(11)
+  final bool isSynced;
+  
+  @HiveField(12)
+  final String? localId;
+  
+  @HiveField(13)
   final String? userName;
   
   AttendanceModel({
@@ -47,8 +53,10 @@ class AttendanceModel extends HiveObject {
     required this.date,
     this.checkIn,
     this.checkOut,
-    required this.latitude,
-    required this.longitude,
+    required this.markedLatitude,
+    required this.markedLongitude,
+    this.distanceFromGeofence,
+    this.isWithinGeofence = true,
     this.isVerified = false,
     this.isSynced = false,
     this.localId,
@@ -63,8 +71,10 @@ class AttendanceModel extends HiveObject {
       date: json['date'],
       checkIn: json['check_in'],
       checkOut: json['check_out'],
-      latitude: json['latitude'] is double ? json['latitude'] : double.tryParse(json['latitude']?.toString() ?? '0') ?? 0.0,
-      longitude: json['longitude'] is double ? json['longitude'] : double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
+      markedLatitude: json['marked_latitude'] is double ? json['marked_latitude'] : double.tryParse(json['marked_latitude']?.toString() ?? '0') ?? 0.0,
+      markedLongitude: json['marked_longitude'] is double ? json['marked_longitude'] : double.tryParse(json['marked_longitude']?.toString() ?? '0') ?? 0.0,
+      distanceFromGeofence: json['distance_from_geofence'] is int ? json['distance_from_geofence'] : int.tryParse(json['distance_from_geofence']?.toString() ?? '0'),
+      isWithinGeofence: json['is_within_geofence'] ?? true,
       isVerified: json['is_verified'] ?? false,
       isSynced: true,
       userName: json['user']?['name'] ?? json['user_name'],
@@ -79,8 +89,8 @@ class AttendanceModel extends HiveObject {
       'date': date,
       if (checkIn != null) 'check_in': checkIn,
       if (checkOut != null) 'check_out': checkOut,
-      'latitude': latitude,
-      'longitude': longitude,
+      'marked_latitude': markedLatitude,
+      'marked_longitude': markedLongitude,
       'is_verified': isVerified,
     };
   }

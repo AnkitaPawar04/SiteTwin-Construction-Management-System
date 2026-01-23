@@ -18,8 +18,10 @@ class Attendance extends Model
         'date',
         'check_in',
         'check_out',
-        'latitude',
-        'longitude',
+        'marked_latitude',
+        'marked_longitude',
+        'distance_from_geofence',
+        'is_within_geofence',
         'is_verified',
     ];
 
@@ -29,8 +31,10 @@ class Attendance extends Model
             'date' => 'date',
             'check_in' => 'datetime',
             'check_out' => 'datetime',
-            'latitude' => 'decimal:7',
-            'longitude' => 'decimal:7',
+            'marked_latitude' => 'decimal:8',
+            'marked_longitude' => 'decimal:8',
+            'distance_from_geofence' => 'integer',
+            'is_within_geofence' => 'boolean',
             'is_verified' => 'boolean',
         ];
     }
