@@ -28,17 +28,17 @@ class InvoiceModel {
     return InvoiceModel(
       id: json['id'] as int,
       projectId: json['project_id'] as int,
-      invoiceNumber: json['invoice_number'] as String,
+      invoiceNumber: (json['invoice_number'] as String?) ?? '',
       totalAmount: (json['total_amount'] is String)
           ? double.tryParse(json['total_amount']) ?? 0.0
           : (json['total_amount'] as num?)?.toDouble() ?? 0.0,
       gstAmount: (json['gst_amount'] is String)
           ? double.tryParse(json['gst_amount']) ?? 0.0
           : (json['gst_amount'] as num?)?.toDouble() ?? 0.0,
-      status: json['status'] as String,
+      status: (json['status'] as String?) ?? 'generated',
       projectName: project?['name'] as String?,
       items: itemsList.map((item) => InvoiceItemModel.fromJson(item as Map<String, dynamic>)).toList(),
-      createdAt: json['created_at'] as String,
+      createdAt: (json['created_at'] as String?) ?? DateTime.now().toIso8601String(),
     );
   }
 
@@ -75,7 +75,7 @@ class InvoiceItemModel {
     return InvoiceItemModel(
       id: json['id'] as int,
       invoiceId: json['invoice_id'] as int,
-      description: json['description'] as String,
+      description: (json['description'] as String?) ?? '',
       amount: (json['amount'] is String)
           ? double.tryParse(json['amount']) ?? 0.0
           : (json['amount'] as num?)?.toDouble() ?? 0.0,

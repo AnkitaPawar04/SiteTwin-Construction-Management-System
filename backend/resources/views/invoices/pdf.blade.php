@@ -155,7 +155,7 @@
             <div class="invoice-title">
                 <h2>INVOICE</h2>
                 <p><strong>Invoice #:</strong> {{ str_pad($invoice->id, 6, '0', STR_PAD_LEFT) }}</p>
-                <p><strong>Date:</strong> {{ $invoice->created_at->format('d/m/Y') }}</p>
+                <p><strong>Date:</strong> {{ $invoice->created_at ? $invoice->created_at->format('d/m/Y') : 'N/A' }}</p>
                 <p><strong>Status:</strong> 
                     <span class="status-badge {{ $invoice->status === 'paid' ? 'status-paid' : 'status-pending' }}">
                         {{ strtoupper($invoice->status) }}

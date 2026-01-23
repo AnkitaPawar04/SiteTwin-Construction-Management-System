@@ -12,7 +12,8 @@ class Invoice extends Model
     const STATUS_GENERATED = 'generated';
     const STATUS_PAID = 'paid';
 
-    public $timestamps = false;
+    // Enable automatic timestamps
+    public $timestamps = true;
 
     protected $fillable = [
         'project_id',
@@ -51,5 +52,13 @@ class Invoice extends Model
     public function dpr()
     {
         return $this->belongsTo(DailyProgressReport::class, 'dpr_id');
+    }
+
+    /**
+     * Get the subtotal amount (total - GST)
+     */
+    public function getSubtotalAmountAttribute()
+    {
+        return $this->total_amount - $this->gst_amount;
     }
 }
