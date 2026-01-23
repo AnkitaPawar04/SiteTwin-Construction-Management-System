@@ -17,6 +17,8 @@ class ApiConstants {
   static const String attendanceCheckIn = '/attendance/check-in';
   static const String attendanceCheckOut = '/attendance/check-out';
   static const String myAttendance = '/attendance/my';
+  static const String allAttendance = '/attendance/all';
+  static const String projectAttendance = '/attendance/project';
   
   // Tasks
   static const String tasks = '/tasks';

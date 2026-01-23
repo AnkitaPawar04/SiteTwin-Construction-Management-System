@@ -6,6 +6,7 @@ import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_create_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_approval_screen.dart';
+import 'package:mobile/presentation/screens/material_request/material_request_allocation_screen.dart';
 
 class MaterialRequestListScreen extends ConsumerStatefulWidget {
   const MaterialRequestListScreen({super.key});
@@ -52,12 +53,42 @@ class _MaterialRequestListScreenState
     }
   }
 
+  Future<void> _navigateToDetails(BuildContext context, MaterialRequestModel request, bool isOwner) async {
+    if (!mounted) return;
+    
+    final navContext = context;
+    final result = isOwner
+        ? await Navigator.push(
+            navContext,
+            MaterialPageRoute(
+              builder: (context) =>
+                  MaterialRequestAllocationScreen(
+                    materialRequest: request,
+                  ),
+            ),
+          )
+        : await Navigator.push(
+            navContext,
+            MaterialPageRoute(
+              builder: (context) =>
+                  MaterialRequestApprovalScreen(
+                    materialRequest: request,
+                  ),
+            ),
+          );
+    if (!mounted) return;
+    if (result == true) {
+      _loadRequests();
+    }
+  }
+
 
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
     final canApprove = user?.isManager == true || user?.isOwner == true;
+    final isOwner = user?.isOwner == true;
 
     return Scaffold(
       appBar: AppBar(
@@ -102,21 +133,9 @@ class _MaterialRequestListScreenState
                       return _MaterialRequestCard(
                         request: request,
                         canApprove: canApprove,
+                        isOwner: isOwner,
                         onTap: canApprove
-                            ? () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        MaterialRequestApprovalScreen(
-                                      materialRequest: request,
-                                    ),
-                                  ),
-                                );
-                                if (result == true) {
-                                  _loadRequests();
-                                }
-                              }
+                            ? () => _navigateToDetails(context, request, isOwner)
                             : null,
                       );
                     },
@@ -145,11 +164,13 @@ class _MaterialRequestListScreenState
 class _MaterialRequestCard extends StatelessWidget {
   final MaterialRequestModel request;
   final bool canApprove;
+  final bool isOwner;
   final VoidCallback? onTap;
 
   const _MaterialRequestCard({
     required this.request,
     required this.canApprove,
+    this.isOwner = false,
     this.onTap,
   });
 
@@ -256,7 +277,7 @@ class _MaterialRequestCard extends StatelessWidget {
             const Divider(),
             const SizedBox(height: 8),
             const Text(
-              'Items:',
+              'Requested Materials:',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -264,25 +285,52 @@ class _MaterialRequestCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ...request.items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor,
-                          shape: BoxShape.circle,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                item.materialName ?? 'Material #${item.materialId}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${item.materialName ?? 'Material #${item.materialId}'} - ${item.quantity} ${item.unit ?? 'units'}',
-                          style: const TextStyle(fontSize: 14),
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 14.0),
+                          child: Text(
+                            'Quantity: ${item.quantity} ${item.unit ?? 'units'}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 )),
             const SizedBox(height: 12),
@@ -296,7 +344,9 @@ class _MaterialRequestCard extends StatelessWidget {
             if (canApprove && request.status == 'pending') ...[
               const SizedBox(height: 8),
               Text(
-                'Tap to approve or reject',
+                isOwner
+                    ? 'Tap to allocate materials and approve'
+                    : 'Tap to approve or reject',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.blue[600],

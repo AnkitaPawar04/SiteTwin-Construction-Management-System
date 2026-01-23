@@ -148,7 +148,7 @@ class AttendanceRepository {
           queryParameters: {'page': page},
         );
         
-        final List<dynamic> data = response.data['data']['data'];
+        final List<dynamic> data = response.data['data'] ?? [];
         final attendances = data.map((json) => AttendanceModel.fromJson(json)).toList();
         
         // Update local cache - only if id is not null
@@ -161,6 +161,73 @@ class AttendanceRepository {
         return attendances;
       } catch (e) {
         AppLogger.error('Failed to fetch attendance', e);
+        rethrow;
+      }
+    }
+    
+    // Return from local storage
+    return _attendanceBox.values.toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  /// Get all attendance records (for owners)
+  Future<List<AttendanceModel>> getAllAttendance({int page = 1}) async {
+    final isOnline = await _networkInfo.isConnected;
+    
+    if (isOnline) {
+      try {
+        final response = await _apiClient.get(
+          ApiConstants.allAttendance,
+          queryParameters: {'page': page},
+        );
+        
+        final List<dynamic> data = response.data['data'] ?? [];
+        final attendances = data.map((json) => AttendanceModel.fromJson(json)).toList();
+        
+        // Update local cache - only if id is not null
+        for (var attendance in attendances) {
+          if (attendance.id != null) {
+            await _attendanceBox.put(attendance.id!, attendance);
+          }
+        }
+        
+        return attendances;
+      } catch (e) {
+        AppLogger.error('Failed to fetch all attendance', e);
+        rethrow;
+      }
+    }
+    
+    // Return from local storage
+    return _attendanceBox.values.toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  /// Get all project attendance records (for owners/managers)
+  Future<List<AttendanceModel>> getProjectAttendance(int projectId, {int page = 1}) async {
+    final isOnline = await _networkInfo.isConnected;
+    
+    if (isOnline) {
+      try {
+        final response = await _apiClient.get(
+          '${ApiConstants.projectAttendance}/$projectId',
+          queryParameters: {'page': page},
+        );
+        
+        final List<dynamic> data = response.data['data'] ?? [];
+        final attendances = data.map((json) => AttendanceModel.fromJson(json)).toList();
+        
+        // Update local cache - only if id is not null
+        for (var attendance in attendances) {
+          if (attendance.id != null) {
+            await _attendanceBox.put(attendance.id!, attendance);
+          }
+        }
+        
+        return attendances;
+      } catch (e) {
+        AppLogger.error('Failed to fetch project attendance', e);
+        rethrow;
       }
     }
     

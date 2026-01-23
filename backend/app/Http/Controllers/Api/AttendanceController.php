@@ -75,6 +75,22 @@ class AttendanceController extends Controller
         ]);
     }
 
+    /**
+     * Get all attendance records (for owners)
+     */
+    public function allAttendance(Request $request)
+    {
+        $attendance = $this->attendanceService->getAllAttendance(
+            $request->query('start_date'),
+            $request->query('end_date')
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $attendance
+        ]);
+    }
+
     public function projectAttendance(Request $request, $projectId)
     {
         $attendance = $this->attendanceService->getAttendanceByProject(

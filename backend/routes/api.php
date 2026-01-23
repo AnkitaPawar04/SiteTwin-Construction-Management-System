@@ -38,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn']);
     Route::post('/attendance/{id}/check-out', [AttendanceController::class, 'checkOut']);
     Route::get('/attendance/my', [AttendanceController::class, 'myAttendance']);
+    Route::get('/attendance/all', [AttendanceController::class, 'allAttendance']);
     Route::get('/attendance/project/{projectId}', [AttendanceController::class, 'projectAttendance']);
     Route::get('/attendance/project/{projectId}/team-summary', [AttendanceController::class, 'teamSummary']);
     Route::get('/attendance/project/{projectId}/trends', [AttendanceController::class, 'attendanceTrends']);

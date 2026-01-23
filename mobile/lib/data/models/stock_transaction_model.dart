@@ -2,7 +2,7 @@ class StockTransactionModel {
   final int id;
   final int projectId;
   final int materialId;
-  final double quantity;
+  final int quantity;
   final String type; // 'in' or 'out'
   final int? referenceId;
   final String? materialName;
@@ -32,8 +32,8 @@ class StockTransactionModel {
       projectId: (json['project_id'] as num?)?.toInt() ?? 0,
       materialId: (json['material_id'] as num?)?.toInt() ?? 0,
       quantity: (json['quantity'] is String)
-          ? double.tryParse(json['quantity']) ?? 0.0
-          : (json['quantity'] as num?)?.toDouble() ?? 0.0,
+          ? int.tryParse(json['quantity']) ?? 0
+          : (json['quantity'] as num?)?.toInt() ?? 0,
       type: json['type']?.toString() ?? '',
       referenceId: (json['reference_id'] as num?)?.toInt(),
       materialName: material?['name'] as String?,

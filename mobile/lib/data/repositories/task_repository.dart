@@ -41,6 +41,30 @@ class TaskRepository {
     // Return from local storage
     return _taskBox.values.toList();
   }
+
+  Future<List<TaskModel>> getAllTasks() async {
+    final isOnline = await _networkInfo.isConnected;
+    
+    if (isOnline) {
+      try {
+        final response = await _apiClient.get(ApiConstants.tasks);
+        final List<dynamic> data = response.data['data'];
+        final tasks = data.map((json) => TaskModel.fromJson(json)).toList();
+        
+        // Update local cache
+        for (var task in tasks) {
+          await _taskBox.put(task.id, task);
+        }
+        
+        return tasks;
+      } catch (e) {
+        AppLogger.error('Failed to fetch all tasks', e);
+      }
+    }
+    
+    // Return from local storage
+    return _taskBox.values.toList();
+  }
   
   Future<TaskModel> updateTaskStatus(int taskId, String status) async {
     final isOnline = await _networkInfo.isConnected;
@@ -120,6 +144,50 @@ class TaskRepository {
       return task;
     } catch (e) {
       AppLogger.error('Failed to create task', e);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteTask(int taskId) async {
+    try {
+      await _apiClient.delete('${ApiConstants.tasks}/$taskId');
+      await _taskBox.delete(taskId);
+      AppLogger.info('Task deleted successfully');
+    } catch (e) {
+      AppLogger.error('Failed to delete task', e);
+      rethrow;
+    }
+  }
+
+  Future<TaskModel> updateTask({
+    required int taskId,
+    String? title,
+    String? description,
+    String? status,
+    int? assignedTo,
+    String? priority,
+    DateTime? dueDate,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (title != null) data['title'] = title;
+      if (description != null) data['description'] = description;
+      if (status != null) data['status'] = status;
+      if (assignedTo != null) data['assigned_to'] = assignedTo;
+      if (priority != null) data['priority'] = priority;
+      if (dueDate != null) data['due_date'] = dueDate.toIso8601String().split('T')[0];
+
+      final response = await _apiClient.put(
+        '${ApiConstants.tasks}/$taskId',
+        data: data,
+      );
+      
+      final task = TaskModel.fromJson(response.data['data']);
+      await _taskBox.put(task.id, task);
+      AppLogger.info('Task updated successfully');
+      return task;
+    } catch (e) {
+      AppLogger.error('Failed to update task', e);
       rethrow;
     }
   }

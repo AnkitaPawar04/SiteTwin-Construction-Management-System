@@ -17,6 +17,8 @@ import 'package:mobile/presentation/widgets/project_switcher.dart';
 import 'package:mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:mobile/presentation/screens/settings/settings_screen.dart';
 import 'package:mobile/presentation/widgets/connection_indicator.dart';
+import 'package:mobile/presentation/screens/admin/user_management_screen.dart';
+import 'package:mobile/presentation/screens/attendance/all_users_attendance_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -37,10 +39,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         TaskScreen(),
         DprListScreen(),
       ];
-    } else {
-      // Manager and Owner - Dashboard only in main view
+    } else if (role == 'manager') {
       return const [
         DashboardScreen(),
+        TaskScreen(),
+      ];
+    } else {
+      // Owner - Dashboard and Tasks
+      return const [
+        DashboardScreen(),
+        TaskScreen(),
       ];
     }
   }
@@ -103,6 +111,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           return loc.tasks;
         case 3:
           return loc.dailyProgress;
+        default:
+          return loc.dashboard;
+      }
+    } else if (role == 'manager' || role == 'owner') {
+      switch (index) {
+        case 0:
+          return loc.dashboard;
+        case 1:
+          return loc.tasks;
         default:
           return loc.dashboard;
       }
@@ -192,25 +209,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
           
-          // Tasks - All roles can view tasks
-          ListTile(
-            leading: const Icon(Icons.task_alt),
-            title: Text(loc.tasks),
-            selected: _currentIndex == 2 && (user.role == 'worker' || user.role == 'engineer'),
-            onTap: () {
-              Navigator.pop(context);
-              if (user.role == 'worker' || user.role == 'engineer') {
-                setState(() => _currentIndex = 2);
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TaskScreen(),
-                  ),
-                );
-              }
-            },
-          ),
+          // Tasks - Workers, Engineers, Managers, and Owners
+          if (user.role == 'worker' || user.role == 'engineer' || user.role == 'manager' || user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.task_alt),
+              title: Text(loc.tasks),
+              selected: _currentIndex == 2 || (user.role == 'manager' && _currentIndex == 1) || (user.role == 'owner' && _currentIndex == 1),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _currentIndex = 1); // Tasks is at index 1 for manager/owner
+              },
+            ),
           
           // Assign Task - Managers and Owners
           if (user.role == 'manager' || user.role == 'owner')
@@ -317,6 +326,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 );
               },
             ),
+          
+          // Team Attendance - Owner only
+          if (user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.group),
+              title: const Text('Team Attendance'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AllUsersAttendanceScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // User Management - Owner only
+          if (user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.people_alt),
+              title: const Text('User Management'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UserManagementScreen(),
+                  ),
+                );
+              },
+            ),
+          
                     const Divider(),
           
           // Settings
@@ -405,9 +447,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       );
+    } else if (user.role == 'manager' || user.role == 'owner') {
+      // Manager and Owner get two tabs (Dashboard, Tasks)
+      return BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: loc.dashboard,
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.task_alt),
+            label: loc.tasks,
+          ),
+        ],
+      );
     }
     
-    // Manager and Owner: no bottom navigation (use drawer only)
+    // No bottom navigation for other roles
     return null;
   }
 }

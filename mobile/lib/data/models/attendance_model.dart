@@ -37,6 +37,9 @@ class AttendanceModel extends HiveObject {
   @HiveField(10)
   final String? localId;
   
+  @HiveField(11)
+  final String? userName;
+  
   AttendanceModel({
     this.id,
     required this.userId,
@@ -49,6 +52,7 @@ class AttendanceModel extends HiveObject {
     this.isVerified = false,
     this.isSynced = false,
     this.localId,
+    this.userName,
   });
   
   factory AttendanceModel.fromJson(Map<String, dynamic> json) {
@@ -63,6 +67,7 @@ class AttendanceModel extends HiveObject {
       longitude: json['longitude'] is double ? json['longitude'] : double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
       isVerified: json['is_verified'] ?? false,
       isSynced: true,
+      userName: json['user']?['name'] ?? json['user_name'],
     );
   }
   

@@ -20,10 +20,17 @@ class TaskController extends Controller
 
     public function index(Request $request)
     {
-        if ($request->has('project_id')) {
+        $user = $request->user();
+        
+        // Managers and owners can see all tasks
+        if ($user->isManager() || $user->isOwner()) {
+            $tasks = $this->taskService->getAllTasks();
+        } else if ($request->has('project_id')) {
+            // Others can view tasks by project if they have access
             $tasks = $this->taskService->getTasksByProject($request->query('project_id'));
         } else {
-            $tasks = $this->taskService->getUserTasks($request->user()->id);
+            // Default: show only user's assigned tasks
+            $tasks = $this->taskService->getUserTasks($user->id);
         }
 
         return response()->json([

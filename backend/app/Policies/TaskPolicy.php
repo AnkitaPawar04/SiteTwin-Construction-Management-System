@@ -24,8 +24,13 @@ class TaskPolicy
 
     public function update(User $user, Task $task)
     {
-        // Owner/Manager/Engineer can update any task in their project
-        if ($user->isOwner() || $user->isManager() || $user->isEngineer()) {
+        // Owner can update any task
+        if ($user->isOwner()) {
+            return true;
+        }
+        
+        // Manager/Engineer can update tasks in their project
+        if ($user->isManager() || $user->isEngineer()) {
             return $user->hasAccessToProject($task->project_id);
         }
         
@@ -35,7 +40,13 @@ class TaskPolicy
 
     public function delete(User $user, Task $task)
     {
-        return ($user->isOwner() || $user->isManager() || $user->isEngineer()) 
+        // Owner can delete any task
+        if ($user->isOwner()) {
+            return true;
+        }
+        
+        // Manager/Engineer can delete tasks in their project
+        return ($user->isManager() || $user->isEngineer()) 
             && $user->hasAccessToProject($task->project_id);
     }
 }

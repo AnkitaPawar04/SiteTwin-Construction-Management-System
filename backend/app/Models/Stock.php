@@ -21,7 +21,7 @@ class Stock extends Model
     protected function casts(): array
     {
         return [
-            'available_quantity' => 'decimal:4',
+            'available_quantity' => 'integer',
             'updated_at' => 'datetime',
         ];
     }

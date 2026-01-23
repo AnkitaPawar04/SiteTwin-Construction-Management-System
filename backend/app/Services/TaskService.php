@@ -53,4 +53,11 @@ class TaskService
             ->orderBy('created_at', 'desc')
             ->get();
     }
+
+    public function getAllTasks()
+    {
+        return Task::with(['project', 'assignedToUser', 'assignedByUser'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
 }

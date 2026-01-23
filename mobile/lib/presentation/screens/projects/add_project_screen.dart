@@ -52,7 +52,14 @@ class _AddProjectScreenState extends ConsumerState<AddProjectScreen> {
         _selectedLocation = LatLng(position.latitude, position.longitude);
       });
       
-      _mapController.move(_selectedLocation!, 14);
+      // Only move map if it's been rendered (i.e., map view is shown)
+      if (_showMap) {
+        try {
+          _mapController.move(_selectedLocation!, 14);
+        } catch (e) {
+          // Map controller not ready yet, ignore
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

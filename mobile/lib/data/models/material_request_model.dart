@@ -80,7 +80,7 @@ class MaterialRequestItemModel {
   final int id;
   final int materialRequestId;
   final int materialId;
-  final double quantity;
+  final int quantity;
   final String? materialName;
   final String? unit;
 
@@ -111,12 +111,12 @@ class MaterialRequestItemModel {
     return parsed ?? 0;
   }
 
-  static double _parseQuantity(dynamic value) {
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value == null) return 0.0;
-    final parsed = double.tryParse(value.toString());
-    return parsed ?? 0.0;
+  static int _parseQuantity(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value == null) return 0;
+    final parsed = int.tryParse(value.toString());
+    return parsed ?? 0;
   }
 
   Map<String, dynamic> toJson() {

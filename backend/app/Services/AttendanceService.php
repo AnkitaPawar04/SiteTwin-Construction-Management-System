@@ -69,9 +69,28 @@ class AttendanceService
         return $query->orderBy('date', 'desc')->get();
     }
 
+    /**
+     * Get all attendance records (for owners)
+     */
+    public function getAllAttendance($startDate = null, $endDate = null)
+    {
+        $query = Attendance::with('user');
+
+        if ($startDate) {
+            $query->where('date', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->where('date', '<=', $endDate);
+        }
+
+        return $query->orderBy('date', 'desc')->get();
+    }
+
     public function getUserAttendance($userId, $projectId = null)
     {
-        $query = Attendance::where('user_id', $userId);
+        $query = Attendance::where('user_id', $userId)
+            ->with('user');
 
         if ($projectId) {
             $query->where('project_id', $projectId);

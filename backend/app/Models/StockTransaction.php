@@ -25,7 +25,7 @@ class StockTransaction extends Model
     protected function casts(): array
     {
         return [
-            'quantity' => 'decimal:4',
+            'quantity' => 'integer',
             'created_at' => 'datetime',
         ];
     }
