@@ -50,7 +50,8 @@ class DprController extends Controller
                 $request->work_description,
                 $request->latitude,
                 $request->longitude,
-                $request->photos ?? []
+                $request->photos ?? [],
+                $request->task_id ?? null
             );
 
             return response()->json([

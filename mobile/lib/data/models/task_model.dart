@@ -37,6 +37,12 @@ class TaskModel extends HiveObject {
   @HiveField(10)
   final String? assignedByName;
   
+  @HiveField(11)
+  final double? billingAmount;
+  
+  @HiveField(12)
+  final double? gstPercentage;
+  
   TaskModel({
     this.id,
     required this.projectId,
@@ -49,6 +55,8 @@ class TaskModel extends HiveObject {
     this.localId,
     this.projectName,
     this.assignedByName,
+    this.billingAmount,
+    this.gstPercentage,
   });
   
   factory TaskModel.fromJson(Map<String, dynamic> json) {
@@ -63,6 +71,8 @@ class TaskModel extends HiveObject {
       isSynced: true,
       projectName: json['project']?['name'],
       assignedByName: json['assigned_by_user']?['name'],
+      billingAmount: json['billing_amount'] != null ? double.tryParse(json['billing_amount'].toString()) : null,
+      gstPercentage: json['gst_percentage'] != null ? double.tryParse(json['gst_percentage'].toString()) : null,
     );
   }
   
@@ -75,6 +85,8 @@ class TaskModel extends HiveObject {
       'title': title,
       'description': description,
       'status': status,
+      if (billingAmount != null) 'billing_amount': billingAmount,
+      if (gstPercentage != null) 'gst_percentage': gstPercentage,
     };
   }
   
@@ -90,6 +102,8 @@ class TaskModel extends HiveObject {
     String? localId,
     String? projectName,
     String? assignedByName,
+    double? billingAmount,
+    double? gstPercentage,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -103,6 +117,8 @@ class TaskModel extends HiveObject {
       localId: localId ?? this.localId,
       projectName: projectName ?? this.projectName,
       assignedByName: assignedByName ?? this.assignedByName,
+      billingAmount: billingAmount ?? this.billingAmount,
+      gstPercentage: gstPercentage ?? this.gstPercentage,
     );
   }
 }

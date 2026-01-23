@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/constants/app_constants.dart';
 import 'package:mobile/data/models/project_model.dart';
+import 'package:mobile/data/models/task_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -15,8 +17,17 @@ final projectsProvider = FutureProvider.autoDispose<List<ProjectModel>>((ref) as
   return await repo.getUserProjects();
 });
 
+final myTasksForDprProvider = FutureProvider.autoDispose<List<TaskModel>>((ref) async {
+  final repo = ref.watch(taskRepositoryProvider);
+  final allTasks = await repo.getMyTasks();
+  // Only show in-progress tasks for DPR creation
+  return allTasks.where((task) => task.status == AppConstants.taskInProgress).toList();
+});
+
 class DprCreateScreen extends ConsumerStatefulWidget {
-  const DprCreateScreen({super.key});
+  final int? preSelectedTaskId;
+  
+  const DprCreateScreen({super.key, this.preSelectedTaskId});
   
   @override
   ConsumerState<DprCreateScreen> createState() => _DprCreateScreenState();
@@ -25,19 +36,22 @@ class DprCreateScreen extends ConsumerStatefulWidget {
 class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   final _workDescriptionController = TextEditingController();
-  final _billingAmountController = TextEditingController();
-  final _gstPercentageController = TextEditingController(text: '18');
   final List<String> _photoPaths = [];
   final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
   int? _selectedProjectId;
+  int? _selectedTaskId;
   
   @override
   void dispose() {
-    _workDescriptionController.dispose();
-    _billingAmountController.dispose();
-    _gstPercentageController.dispose();
-    super.dispose();
+    _woinitState() {
+    super.initState();
+    _selectedTaskId = widget.preSelectedTaskId;
+  }
+  
+  @override
+  void dispose() {
+    _workDescription);
   }
   
   Future<void> _pickImage() async {
@@ -112,7 +126,17 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
     }
   }
   
-  Future<void> _submitDpr() async {
+  Future<void> _sTaskId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a task'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+    
+    if (_selectedubmitDpr() async {
     if (!_formKey.currentState!.validate()) return;
     
     if (_selectedProjectId == null) {
@@ -132,12 +156,11 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
           backgroundColor: AppTheme.errorColor,
         ),
       );
-      return;
-    }
-    
-    setState(() => _isSubmitting = true);
-    
-    try {
+      retaskId: _selectedTaskId,
+        workDescription: _workDescriptionController.text.trim(),
+        latitude: position.latitude,
+        longitude: position.longitude,
+        photoPaths: _photoPaths
       final position = await _getCurrentLocation();
       if (position == null) {
         throw Exception('Failed to get current location');
@@ -180,6 +203,7 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   @override
   Widget build(BuildContext context) {
     final projectsAsync = ref.watch(projectsProvider);
+    final tasksAsync = ref.watch(myTasksForDprProvider);
     
     return Scaffold(
       appBar: AppBar(
@@ -190,49 +214,199 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            // Project Selection
-            projectsAsync.when(
-              data: (projects) {
-                if (projects.isEmpty) {
+            // Task Selection (Primary)
+            tasksAsync.when(
+              data: (tasks) {
+                if (tasks.isEmpty) {
                   return Card(
+                    color: Colors.orange[50],
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: Text('No projects assigned', style: TextStyle(color: Colors.grey[600])),
+                      child: Column(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.orange[700]),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No in-progress tasks available',
+                            style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Start a task first to submit a DPR',
+                            style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
                 
-                // Auto-select first project if none selected
-                if (_selectedProjectId == null && projects.isNotEmpty) {
+                // Auto-select the pre-selected task or first task
+                if (_selectedTaskId == null && tasks.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) {
-                      setState(() => _selectedProjectId = projects.first.id);
+                      setState(() {
+                        _selectedTaskId = widget.preSelectedTaskId ?? tasks.first.id;
+                        // Set project from selected task
+                        final selectedTask = tasks.firstWhere((t) => t.id == _selectedTaskId);
+                        _selectedProjectId = selectedTask.projectId;
+                      });
                     }
                   });
                 }
                 
+                final selectedTask = tasks.firstWhere(
+                  (t) => t.id == _selectedTaskId,
+                  orElse: () => tasks.first,
+                );
+                
                 return Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _selectedProjectId,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Project *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: projects.map((project) {
-                        return DropdownMenuItem<int>(
-                          value: project.id,
-                          child: Text(project.name),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedProjectId = value);
-                      },
-                      validator: (value) {
-                        if (value == null) return 'Please select a project';
-                        return null;
-                      },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DropdownButtonFormField<int>(
+                          value: _selectedTaskId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Task *',
+                            border: OutlineInputBorder(),
+                            helperText: 'Choose which task this report is for',
+                          ),
+                          items: tasks.map((task) {
+                            return DropdownMenuItem<int>(
+                              value: task.id,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    task.title,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  if (task.projectName != null)
+                                    Text(
+                                      task.projectName!,
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _selectedTaskId = value;
+                                // Update project when task changes
+                                final task = tasks.firstWhere((t) => t.id == value);
+                                _selectedProjectId = task.projectId;
+                              });
+                            }
+                          },
+                          validator: (value) {
+                            if (value == null) return 'Please select a task';
+                            return null;
+                          },
+                        ),
+                        // Show task billing info if available
+                        if (selectedTask.billingAmount != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue[200]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.receipt_long, color: Colors.blue[700], size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Auto-billing enabled',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue[900],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
+                                        '₹${selectedTask.billingAmount!.toStringAsFixed(2)} + ${selectedTask.gstPercentage ?? 18}% GST',
+                                        style: TextStyle(color: Colors.blue[700], fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+              loading: () => const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+              error: (error, stack) => Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text('Error loading tasks: $error'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Project Selection (Auto-filled from task)
+            projectsAsync.when(
+              data: (projects) {
+                final selectedProject = projects.firstWhere(
+                  (p) => p.id == _selectedProjectId,
+                  orElse: () => ProjectModel(id: 0, name: 'Unknown Project', description: '', location: '', status: ''),
+                );
+                
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Project',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.business, size: 18, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                selectedProject.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Auto-selected from task',
+                          style: TextStyle(fontSize: 11, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -282,65 +456,6 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
                         }
                         return null;
                       },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Billing Information Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Billing Information (for Auto-GST Bill)',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextFormField(
-                            controller: _billingAmountController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(
-                              labelText: 'Billing Amount (₹)',
-                              hintText: 'e.g. 50000',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value != null && value.isNotEmpty) {
-                                if (double.tryParse(value) == null) return 'Enter a valid number';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 1,
-                          child: TextFormField(
-                            controller: _gstPercentageController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(
-                              labelText: 'GST %',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'If entered, an official GST bill will be generated upon approval.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
                     ),
                   ],
                 ),

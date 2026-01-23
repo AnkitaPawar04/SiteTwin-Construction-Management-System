@@ -5,6 +5,7 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/task_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:mobile/providers/auth_provider.dart';
+import 'package:mobile/presentation/screens/dpr/dpr_create_screen.dart';
 
 final myTasksProvider = FutureProvider.autoDispose<List<TaskModel>>((ref) async {
   final repo = ref.watch(taskRepositoryProvider);
@@ -480,9 +481,29 @@ class _TaskCardState extends ConsumerState<TaskCard> {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      child: InkWell(
+        onTap: widget.isManagerOrOwner
+            ? null
+            : () {
+                // For workers, navigate to DPR creation with this task pre-selected
+                if (widget.task.status == AppConstants.taskInProgress) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => DprCreateScreen(preSelectedTaskId: widget.task.id),
+                    ),
+                  );
+                } else if (widget.task.status == AppConstants.taskPending) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Start the task first to submit a DPR'),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                }
+              },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Title and action buttons

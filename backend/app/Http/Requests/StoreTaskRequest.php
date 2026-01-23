@@ -21,6 +21,8 @@ class StoreTaskRequest extends FormRequest
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'status' => ['sometimes', Rule::in([Task::STATUS_PENDING, Task::STATUS_IN_PROGRESS, Task::STATUS_COMPLETED])],
+            'billing_amount' => 'required|numeric|min:0',
+            'gst_percentage' => 'required|numeric|min:0|max:100',
         ];
     }
 }

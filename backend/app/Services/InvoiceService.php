@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceService
 {
-    public function generateInvoice($projectId, array $items)
+    public function generateInvoice($projectId, array $items, $taskId = null, $dprId = null)
     {
-        return DB::transaction(function () use ($projectId, $items) {
+        return DB::transaction(function () use ($projectId, $items, $taskId, $dprId) {
             $totalAmount = 0;
             $totalGst = 0;
 
@@ -20,6 +20,8 @@ class InvoiceService
 
             $invoice = Invoice::create([
                 'project_id' => $projectId,
+                'task_id' => $taskId,
+                'dpr_id' => $dprId,
                 'invoice_number' => $invoiceNumber,
                 'total_amount' => 0,
                 'gst_amount' => 0,
@@ -33,6 +35,7 @@ class InvoiceService
 
                 InvoiceItem::create([
                     'invoice_id' => $invoice->id,
+                    'task_id' => $item['task_id'] ?? null,
                     'description' => $item['description'],
                     'amount' => $amount,
                     'gst_percentage' => $gstPercentage,
@@ -54,19 +57,40 @@ class InvoiceService
 
     public function generateInvoiceFromDpr($dpr)
     {
-        if (!$dpr->billing_amount || $dpr->billing_amount <= 0) {
+        // Get task information if DPR is linked to a task
+        $task = $dpr->task;
+        
+        // Calculate amount based on task's billing_amount (unit rate) or DPR's billing amount
+        $amount = 0;
+        $gstPercentage = 18.00; // Default GST
+        $description = "Work completed as per DPR dated " . ($dpr->report_date?->format('d M Y') ?? date('d M Y'));
+        
+        if ($task) {
+            // Use task's billing_amount (unit rate) and GST percentage
+            $amount = $task->billing_amount ?? 0;
+            $gstPercentage = $task->gst_percentage ?? 18.00;
+            $description = "Task: " . $task->title . " - " . $description;
+        } elseif ($dpr->billing_amount && $dpr->billing_amount > 0) {
+            // Fallback to DPR's billing amount if no task linked
+            $amount = $dpr->billing_amount;
+            $gstPercentage = $dpr->gst_percentage ?? 18.00;
+        }
+        
+        // Don't generate invoice if amount is zero
+        if ($amount <= 0) {
             return null;
         }
 
         $items = [
             [
-                'description' => "Work completed as per DPR dated " . ($dpr->report_date?->format('d M Y') ?? date('d M Y')),
-                'amount' => $dpr->billing_amount,
-                'gst_percentage' => $dpr->gst_percentage ?? 18.00,
+                'description' => $description,
+                'amount' => $amount,
+                'gst_percentage' => $gstPercentage,
+                'task_id' => $task?->id,
             ]
         ];
 
-        return $this->generateInvoice($dpr->project_id, $items);
+        return $this->generateInvoice($dpr->project_id, $items, $task?->id, $dpr->id);
     }
 
     public function generateInvoiceFromTask($task)
@@ -80,10 +104,11 @@ class InvoiceService
                 'description' => "Task completed: " . $task->title,
                 'amount' => $task->billing_amount,
                 'gst_percentage' => $task->gst_percentage ?? 18.00,
+                'task_id' => $task->id,
             ]
         ];
 
-        return $this->generateInvoice($task->project_id, $items);
+        return $this->generateInvoice($task->project_id, $items, $task->id);
     }
 
     public function markAsPaid($invoiceId)

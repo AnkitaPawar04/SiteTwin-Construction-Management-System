@@ -18,12 +18,13 @@ class DprService
     {
         $this->invoiceService = $invoiceService;
     }
-    public function createDpr($userId, $projectId, $workDescription, $latitude, $longitude, $photos = [])
+    public function createDpr($userId, $projectId, $workDescription, $latitude, $longitude, $photos = [], $taskId = null)
     {
-        return DB::transaction(function () use ($userId, $projectId, $workDescription, $latitude, $longitude, $photos) {
+        return DB::transaction(function () use ($userId, $projectId, $workDescription, $latitude, $longitude, $photos, $taskId) {
             $dpr = DailyProgressReport::create([
                 'user_id' => $userId,
                 'project_id' => $projectId,
+                'task_id' => $taskId,
                 'work_description' => $workDescription,
                 'report_date' => Carbon::today()->toDateString(),
                 'latitude' => $latitude,

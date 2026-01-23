@@ -16,6 +16,8 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _billingAmountController = TextEditingController();
+  final _gstPercentageController = TextEditingController(text: '18.0');
   int? _selectedProjectId;
   int? _selectedUserId;
   String _selectedPriority = 'medium';
@@ -35,6 +37,8 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _billingAmountController.dispose();
+    _gstPercentageController.dispose();
     super.dispose();
   }
 
@@ -94,6 +98,8 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
         projectId: _selectedProjectId!,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
+        billingAmount: double.parse(_billingAmountController.text.trim()),
+        gstPercentage: double.parse(_gstPercentageController.text.trim()),
         assignedTo: _selectedUserId,
         priority: _selectedPriority,
         dueDate: _dueDate,
@@ -236,6 +242,67 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter description';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Billing Information
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Billing Information',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _billingAmountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Unit Rate (₹)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.currency_rupee),
+                          helperText: 'Rate for this task completion',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter unit rate';
+                          }
+                          final rate = double.tryParse(value);
+                          if (rate == null || rate <= 0) {
+                            return 'Please enter a valid rate';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _gstPercentageController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'GST Percentage (%)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.percent),
+                          helperText: 'GST rate (default 18%)',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter GST percentage';
+                          }
+                          final gst = double.tryParse(value);
+                          if (gst == null || gst < 0 || gst > 100) {
+                            return 'Please enter a valid GST percentage (0-100)';
                           }
                           return null;
                         },

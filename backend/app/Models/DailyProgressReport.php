@@ -17,6 +17,7 @@ class DailyProgressReport extends Model
 
     protected $fillable = [
         'project_id',
+        'task_id',
         'user_id',
         'work_description',
         'report_date',
@@ -55,5 +56,15 @@ class DailyProgressReport extends Model
     public function approval()
     {
         return $this->morphOne(Approval::class, 'reference');
+    }
+
+    public function task()
+    {
+        return $this->belongsTo(Task::class);
+    }
+
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class, 'dpr_id');
     }
 }

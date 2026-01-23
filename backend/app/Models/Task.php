@@ -47,4 +47,9 @@ class Task extends Model
     {
         return $this->belongsTo(User::class, 'assigned_by');
     }
+
+    public function dprs()
+    {
+        return $this->hasMany(DailyProgressReport::class);
+    }
 }

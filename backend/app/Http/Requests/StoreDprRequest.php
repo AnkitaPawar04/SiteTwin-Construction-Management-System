@@ -15,6 +15,7 @@ class StoreDprRequest extends FormRequest
     {
         return [
             'project_id' => 'required|exists:projects,id',
+            'task_id' => 'nullable|exists:tasks,id',
             'work_description' => 'required|string',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',

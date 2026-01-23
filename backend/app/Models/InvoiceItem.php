@@ -13,6 +13,7 @@ class InvoiceItem extends Model
 
     protected $fillable = [
         'invoice_id',
+        'task_id',
         'description',
         'amount',
         'gst_percentage',
@@ -29,5 +30,10 @@ class InvoiceItem extends Model
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function task()
+    {
+        return $this->belongsTo(Task::class);
     }
 }

@@ -26,6 +26,7 @@ class DprRepository {
     required double latitude,
     required double longitude,
     required List<String> photoPaths,
+    int? taskId,
     double? billingAmount,
     double? gstPercentage,
   }) async {
@@ -37,6 +38,7 @@ class DprRepository {
         // Create FormData for multipart upload
         final formData = FormData.fromMap({
           'project_id': projectId,
+          if (taskId != null) 'task_id': taskId,
           'work_description': workDescription,
           'report_date': date,
           'latitude': latitude,
@@ -82,6 +84,7 @@ class DprRepository {
         localPhotoPaths: photoPaths,
         isSynced: false,
         localId: localId,
+        taskId: taskId,
         billingAmount: billingAmount,
         gstPercentage: gstPercentage,
       );

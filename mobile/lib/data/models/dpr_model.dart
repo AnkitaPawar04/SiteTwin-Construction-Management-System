@@ -50,6 +50,9 @@ class DprModel extends HiveObject {
   @HiveField(14)
   final double? gstPercentage;
   
+  @HiveField(15)
+  final int? taskId;
+  
   DprModel({
     this.id,
     required this.projectId,
@@ -66,6 +69,7 @@ class DprModel extends HiveObject {
     this.projectName,
     this.billingAmount,
     this.gstPercentage,
+    this.taskId,
   });
   
   factory DprModel.fromJson(Map<String, dynamic> json) {
@@ -105,6 +109,7 @@ class DprModel extends HiveObject {
       projectName: json['project']?['name'],
       billingAmount: json['billing_amount'] != null ? double.tryParse(json['billing_amount'].toString()) : null,
       gstPercentage: json['gst_percentage'] != null ? double.tryParse(json['gst_percentage'].toString()) : null,
+      taskId: json['task_id'] != null ? (json['task_id'] is int ? json['task_id'] : int.tryParse(json['task_id'].toString())) : null,
     );
   }
   
@@ -118,6 +123,7 @@ class DprModel extends HiveObject {
       'latitude': latitude,
       'longitude': longitude,
       'status': status,
+      if (taskId != null) 'task_id': taskId,
       'billing_amount': billingAmount,
       'gst_percentage': gstPercentage,
     };

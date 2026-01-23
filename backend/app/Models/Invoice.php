@@ -16,6 +16,8 @@ class Invoice extends Model
 
     protected $fillable = [
         'project_id',
+        'task_id',
+        'dpr_id',
         'invoice_number',
         'total_amount',
         'gst_amount',
@@ -39,5 +41,15 @@ class Invoice extends Model
     public function items()
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function task()
+    {
+        return $this->belongsTo(Task::class);
+    }
+
+    public function dpr()
+    {
+        return $this->belongsTo(DailyProgressReport::class, 'dpr_id');
     }
 }
