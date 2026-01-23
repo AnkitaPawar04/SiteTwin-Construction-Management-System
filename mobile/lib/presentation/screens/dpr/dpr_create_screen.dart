@@ -43,15 +43,15 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   int? _selectedTaskId;
   
   @override
-  void dispose() {
-    _woinitState() {
+  void initState() {
     super.initState();
     _selectedTaskId = widget.preSelectedTaskId;
   }
   
   @override
   void dispose() {
-    _workDescription);
+    _workDescriptionController.dispose();
+    super.dispose();
   }
   
   Future<void> _pickImage() async {
@@ -126,7 +126,10 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
     }
   }
   
-  Future<void> _sTaskId == null) {
+  Future<void> _submitDpr() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    if (_selectedTaskId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a task'),
@@ -135,9 +138,6 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
       );
       return;
     }
-    
-    if (_selectedubmitDpr() async {
-    if (!_formKey.currentState!.validate()) return;
     
     if (_selectedProjectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -156,11 +156,12 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
           backgroundColor: AppTheme.errorColor,
         ),
       );
-      retaskId: _selectedTaskId,
-        workDescription: _workDescriptionController.text.trim(),
-        latitude: position.latitude,
-        longitude: position.longitude,
-        photoPaths: _photoPaths
+      return;
+    }
+    
+    setState(() => _isSubmitting = true);
+    
+    try {
       final position = await _getCurrentLocation();
       if (position == null) {
         throw Exception('Failed to get current location');
@@ -169,12 +170,11 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
       final repo = ref.read(dprRepositoryProvider);
       await repo.submitDpr(
         projectId: _selectedProjectId!,
+        taskId: _selectedTaskId,
         workDescription: _workDescriptionController.text.trim(),
         latitude: position.latitude,
         longitude: position.longitude,
         photoPaths: _photoPaths,
-        billingAmount: double.tryParse(_billingAmountController.text),
-        gstPercentage: double.tryParse(_gstPercentageController.text),
       );
       
       if (mounted) {
@@ -370,7 +370,18 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
               data: (projects) {
                 final selectedProject = projects.firstWhere(
                   (p) => p.id == _selectedProjectId,
-                  orElse: () => ProjectModel(id: 0, name: 'Unknown Project', description: '', location: '', status: ''),
+                  orElse: () => ProjectModel(
+                    id: 0,
+                    name: 'Unknown Project',
+                    description: '',
+                    location: '',
+                    startDate: '',
+                    endDate: '',
+                    // status: '',
+                    ownerId: 0,
+                    latitude: 0,
+                    longitude: 0,
+                  ),
                 );
                 
                 return Card(

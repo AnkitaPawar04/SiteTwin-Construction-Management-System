@@ -504,8 +504,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Title and action buttons
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -697,7 +697,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                 ],
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );
