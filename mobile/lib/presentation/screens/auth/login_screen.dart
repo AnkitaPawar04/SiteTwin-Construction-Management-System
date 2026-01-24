@@ -184,7 +184,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   // Logo/Icon
                   Icon(
-                    Icons.construction,
+                    Icons.engineering,
                     size: 100,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -192,7 +192,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   
                   // Title
                   Text(
-                    'Construction Manager',
+                    'SiteTwin',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,

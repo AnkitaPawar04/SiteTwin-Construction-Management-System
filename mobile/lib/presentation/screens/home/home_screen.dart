@@ -200,7 +200,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               selected: _currentIndex == 2 || (user.role == 'manager' && _currentIndex == 1) || (user.role == 'owner' && _currentIndex == 1),
               onTap: () {
                 Navigator.pop(context);
-                setState(() => _currentIndex = 1); // Tasks is at index 1 for manager/owner
+                setState(() {
+                  if (user.role == 'worker' || user.role == 'engineer') {
+                    _currentIndex = 2; // Tasks is at index 2 for workers/engineers
+                  } else {
+                    _currentIndex = 1; // Tasks is at index 1 for manager/owner
+                  }
+                });
               },
             ),
           

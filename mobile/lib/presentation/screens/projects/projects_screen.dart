@@ -431,8 +431,10 @@ class _ProjectDetailsDialog extends ConsumerWidget {
               '${project.latitude.toStringAsFixed(6)}, ${project.longitude.toStringAsFixed(6)}',
             ),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
