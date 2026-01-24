@@ -14,6 +14,9 @@ import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dar
 import 'package:mobile/presentation/screens/stock/stock_in_screen.dart';
 import 'package:mobile/presentation/screens/stock/stock_out_screen.dart';
 import 'package:mobile/presentation/screens/purchase_order/purchase_order_list_screen.dart';
+import 'package:mobile/presentation/screens/analytics/cost_dashboard_screen.dart';
+import 'package:mobile/presentation/screens/analytics/consumption_variance_screen.dart';
+import 'package:mobile/presentation/screens/analytics/unit_costing_screen.dart';
 import 'package:mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:mobile/presentation/screens/settings/settings_screen.dart';
 import 'package:mobile/presentation/widgets/connection_indicator.dart';
@@ -396,6 +399,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const PurchaseOrderListScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          const Divider(),
+          
+          // Cost Analytics Section - Owners and Project Managers
+          if (user.role == 'owner' || user.role == 'manager' || user.role == 'project_manager')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Cost Analytics',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ),
+          
+          // Cost Dashboard - Owners and Project Managers
+          if (user.role == 'owner' || user.role == 'manager' || user.role == 'project_manager')
+            ListTile(
+              leading: const Icon(Icons.analytics),
+              title: const Text('Cost Dashboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CostDashboardScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Consumption Variance - Owners and Project Managers
+          if (user.role == 'owner' || user.role == 'manager' || user.role == 'project_manager')
+            ListTile(
+              leading: const Icon(Icons.trending_up),
+              title: const Text('Consumption Variance'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ConsumptionVarianceScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Unit Costing - Owners and Project Managers
+          if (user.role == 'owner' || user.role == 'manager' || user.role == 'project_manager')
+            ListTile(
+              leading: const Icon(Icons.apartment),
+              title: const Text('Unit Costing'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UnitCostingScreen(),
                   ),
                 );
               },
