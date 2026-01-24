@@ -7,6 +7,7 @@ import 'package:mobile/presentation/screens/tasks/task_screen.dart';
 import 'package:mobile/presentation/screens/tasks/task_assignment_screen.dart';
 import 'package:mobile/presentation/screens/dpr/dpr_list_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_list_screen.dart';
+import 'package:mobile/presentation/screens/material_request/material_request_create_screen.dart';
 import 'package:mobile/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:mobile/presentation/screens/projects/projects_screen.dart';
 import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dart';
@@ -603,14 +604,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Site Engineer on Material Requests screen (index 2): "New Request" button
     if ((user.role == 'engineer' || user.role == 'site_engineer') && _currentIndex == 2) {
       return FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Phase 2 - Implement MaterialRequestCreateScreen
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(loc.translate('coming_soon')),
-              duration: const Duration(seconds: 2),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MaterialRequestCreateScreen(),
             ),
           );
+          // Refresh list if request was created
+          if (result == true && mounted) {
+            setState(() {});
+          }
         },
         icon: const Icon(Icons.add),
         label: Text(loc.translate('new_request')),

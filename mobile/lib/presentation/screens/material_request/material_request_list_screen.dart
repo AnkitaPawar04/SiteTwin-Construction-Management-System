@@ -4,10 +4,10 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/material_request_model.dart';
 import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/providers/providers.dart';
-import 'package:mobile/presentation/screens/material_request/material_request_create_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_approval_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_allocation_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_receive_screen.dart';
+import 'package:mobile/presentation/screens/material_request/material_request_procurement_screen.dart';
 
 class MaterialRequestListScreen extends ConsumerStatefulWidget {
   const MaterialRequestListScreen({super.key});
@@ -36,11 +36,14 @@ class _MaterialRequestListScreenState
       final user = ref.read(authStateProvider).value;
       
       // Load appropriate requests based on user role
-      if (user?.isManager == true || user?.isOwner == true) {
-        // Managers and owners see pending requests for approval
+      if (user?.role == 'purchase_manager') {
+        // Purchase Managers see all pending/reviewed requests for procurement decision
+        _requests = await repository.getPendingRequests();
+      } else if (user?.role == 'manager' || user?.role == 'project_manager' || user?.isOwner == true) {
+        // Project Managers and owners see pending requests for approval
         _requests = await repository.getPendingRequests();
       } else {
-        // Workers and engineers see only their own requests
+        // Site Engineers and workers see only their own requests
         _requests = await repository.getMyRequests();
       }
       
@@ -56,29 +59,28 @@ class _MaterialRequestListScreenState
     }
   }
 
-  Future<void> _navigateToDetails(BuildContext context, MaterialRequestModel request, bool isOwner) async {
+  Future<void> _navigateToDetails(BuildContext context, MaterialRequestModel request, bool isOwner, bool isPurchaseManager) async {
     if (!mounted) return;
     
     final navContext = context;
-    final result = isOwner
-        ? await Navigator.push(
-            navContext,
-            MaterialPageRoute(
-              builder: (context) =>
-                  MaterialRequestAllocationScreen(
-                    materialRequest: request,
-                  ),
-            ),
-          )
-        : await Navigator.push(
-            navContext,
-            MaterialPageRoute(
-              builder: (context) =>
-                  MaterialRequestApprovalScreen(
-                    materialRequest: request,
-                  ),
-            ),
-          );
+    Widget screen;
+    
+    if (isPurchaseManager) {
+      // Purchase Manager sees procurement review screen
+      screen = MaterialRequestProcurementScreen(materialRequest: request);
+    } else if (isOwner) {
+      // Owner sees allocation screen
+      screen = MaterialRequestAllocationScreen(materialRequest: request);
+    } else {
+      // Project Manager sees approval screen
+      screen = MaterialRequestApprovalScreen(materialRequest: request);
+    }
+    
+    final result = await Navigator.push(
+      navContext,
+      MaterialPageRoute(builder: (context) => screen),
+    );
+    
     if (!mounted) return;
     if (result == true) {
       _loadRequests();
@@ -109,12 +111,13 @@ class _MaterialRequestListScreenState
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
-    final canApprove = user?.isManager == true || user?.isOwner == true;
+    final isPurchaseManager = user?.role == 'purchase_manager';
+    final canApprove = user?.role == 'manager' || user?.role == 'project_manager' || user?.isOwner == true;
     final isOwner = user?.isOwner == true;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Material Requests'),
+        title: Text(isPurchaseManager ? 'Material Requests - Review' : 'Material Requests'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -155,9 +158,10 @@ class _MaterialRequestListScreenState
                       return _MaterialRequestCard(
                         request: request,
                         canApprove: canApprove,
+                        isPurchaseManager: isPurchaseManager,
                         isOwner: isOwner,
-                        onTap: canApprove && request.status == 'pending'
-                            ? () => _navigateToDetails(context, request, isOwner)
+                        onTap: (canApprove || isPurchaseManager) && request.status.toLowerCase() == 'pending'
+                            ? () => _navigateToDetails(context, request, isOwner, isPurchaseManager)
                             : null,
                         onReceive: (request.status == 'approved' && !isOwner)
                             ? () => _navigateToReceive(context, request)
@@ -166,22 +170,6 @@ class _MaterialRequestListScreenState
                     },
                   ),
                 ),
-      floatingActionButton: canApprove
-          ? null
-          : FloatingActionButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MaterialRequestCreateScreen(),
-                  ),
-                );
-                if (result == true) {
-                  _loadRequests();
-                }
-              },
-              child: const Icon(Icons.add),
-            ),
     );
   }
 }
@@ -189,6 +177,7 @@ class _MaterialRequestListScreenState
 class _MaterialRequestCard extends StatelessWidget {
   final MaterialRequestModel request;
   final bool canApprove;
+  final bool isPurchaseManager;
   final bool isOwner;
   final VoidCallback? onTap;
   final VoidCallback? onReceive;
@@ -196,32 +185,39 @@ class _MaterialRequestCard extends StatelessWidget {
   const _MaterialRequestCard({
     required this.request,
     required this.canApprove,
+    this.isPurchaseManager = false,
     this.isOwner = false,
     this.onTap,
     this.onReceive,
   });
 
   Color _getStatusColor() {
-    switch (request.status) {
+    switch (request.status.toLowerCase()) {
       case 'approved':
         return AppTheme.successColor;
       case 'rejected':
         return AppTheme.errorColor;
-      case 'received':
+      case 'reviewed':
         return Colors.blue;
+      case 'received':
+        return Colors.indigo;
+      case 'pending':
       default:
         return AppTheme.warningColor;
     }
   }
 
   IconData _getStatusIcon() {
-    switch (request.status) {
+    switch (request.status.toLowerCase()) {
       case 'approved':
         return Icons.check_circle;
       case 'rejected':
         return Icons.cancel;
+      case 'reviewed':
+        return Icons.visibility;
       case 'received':
         return Icons.inventory;
+      case 'pending':
       default:
         return Icons.pending;
     }
@@ -372,12 +368,14 @@ class _MaterialRequestCard extends StatelessWidget {
                 color: Colors.grey[600],
               ),
             ),
-            if (canApprove && request.status == 'pending') ...[
+            if ((canApprove || isPurchaseManager) && request.status.toLowerCase() == 'pending') ...[
               const SizedBox(height: 8),
               Text(
-                isOwner
-                    ? 'Tap to allocate materials and approve'
-                    : 'Tap to approve or reject',
+                isPurchaseManager
+                    ? 'Tap to review and decide procurement strategy'
+                    : isOwner
+                        ? 'Tap to allocate materials and approve'
+                        : 'Tap to approve or reject',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.blue[600],
