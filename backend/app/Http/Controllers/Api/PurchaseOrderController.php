@@ -69,17 +69,41 @@ class PurchaseOrderController extends Controller
             'project_id' => 'required|exists:projects,id',
             'vendor_id' => 'required|exists:vendors,id',
             'material_request_id' => 'nullable|exists:material_requests,id',
-            'type' => 'required|in:gst,non_gst',
             'items' => 'required|array|min:1',
             'items.*.material_id' => 'required|exists:materials,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit' => 'required|string',
             'items.*.rate' => 'required|numeric|min:0',
-            'items.*.gst_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         try {
             DB::beginTransaction();
+
+            // PHASE 2: Validate GST/Non-GST separation
+            $materialIds = array_column($validated['items'], 'material_id');
+            $materials = \App\Models\Material::whereIn('id', $materialIds)->get()->keyBy('id');
+            
+            $gstTypes = [];
+            foreach ($materialIds as $materialId) {
+                $material = $materials->get($materialId);
+                if (!$material) {
+                    throw new \Exception("Material ID {$materialId} not found");
+                }
+                $gstTypes[] = $material->gst_type;
+            }
+            
+            // Check if all items have the same GST type
+            $uniqueGstTypes = array_unique($gstTypes);
+            if (count($uniqueGstTypes) > 1) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot mix GST and Non-GST materials in the same Purchase Order. Please create separate POs for GST and Non-GST items.'
+                ], 422);
+            }
+            
+            // Auto-detect PO type from materials
+            $poType = $uniqueGstTypes[0]; // 'gst' or 'non_gst'
 
             $poNumber = PurchaseOrder::generatePONumber();
             
@@ -87,13 +111,27 @@ class PurchaseOrderController extends Controller
             $totalAmount = 0;
             $totalGstAmount = 0;
 
+            $itemsData = [];
             foreach ($validated['items'] as $item) {
+                $material = $materials->get($item['material_id']);
                 $amount = $item['quantity'] * $item['rate'];
-                $gstPercentage = $item['gst_percentage'] ?? 0;
+                
+                // Use material's GST percentage if it's a GST material
+                $gstPercentage = $material->isGstApplicable() ? $material->gst_percentage : 0;
                 $gstAmount = ($amount * $gstPercentage) / 100;
                 
                 $totalAmount += $amount;
                 $totalGstAmount += $gstAmount;
+                
+                $itemsData[] = [
+                    'material' => $material,
+                    'quantity' => $item['quantity'],
+                    'unit' => $item['unit'],
+                    'rate' => $item['rate'],
+                    'amount' => $amount,
+                    'gst_percentage' => $gstPercentage,
+                    'gst_amount' => $gstAmount,
+                ];
             }
 
             $grandTotal = $totalAmount + $totalGstAmount;
@@ -106,27 +144,24 @@ class PurchaseOrderController extends Controller
                 'material_request_id' => $validated['material_request_id'] ?? null,
                 'created_by' => auth()->id(),
                 'status' => PurchaseOrder::STATUS_CREATED,
-                'type' => $validated['type'],
+                'type' => $poType,
                 'total_amount' => $totalAmount,
                 'gst_amount' => $totalGstAmount,
                 'grand_total' => $grandTotal,
             ]);
 
             // Create purchase order items
-            foreach ($validated['items'] as $item) {
-                $amount = $item['quantity'] * $item['rate'];
-                $gstPercentage = $item['gst_percentage'] ?? 0;
-                $gstAmount = ($amount * $gstPercentage) / 100;
-                $totalItemAmount = $amount + $gstAmount;
-
+            foreach ($itemsData as $itemData) {
+                $totalItemAmount = $itemData['amount'] + $itemData['gst_amount'];
+                
                 $purchaseOrder->items()->create([
-                    'material_id' => $item['material_id'],
-                    'quantity' => $item['quantity'],
-                    'unit' => $item['unit'],
-                    'rate' => $item['rate'],
-                    'amount' => $amount,
-                    'gst_percentage' => $gstPercentage,
-                    'gst_amount' => $gstAmount,
+                    'material_id' => $itemData['material']->id,
+                    'quantity' => $itemData['quantity'],
+                    'unit' => $itemData['unit'],
+                    'rate' => $itemData['rate'],
+                    'amount' => $itemData['amount'],
+                    'gst_percentage' => $itemData['gst_percentage'],
+                    'gst_amount' => $itemData['gst_amount'],
                     'total_amount' => $totalItemAmount,
                 ]);
             }
@@ -143,7 +178,7 @@ class PurchaseOrderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Purchase Order created successfully',
+                'message' => "Purchase Order created successfully as {$poType} type",
                 'data' => $purchaseOrder->load(['project', 'vendor', 'items.material'])
             ], 201);
 
@@ -208,10 +243,17 @@ class PurchaseOrderController extends Controller
 
         $validated = $request->validate([
             'invoice' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB max
+            'invoice_type' => 'required|in:gst,non_gst',
         ]);
 
         try {
-            $purchaseOrder = PurchaseOrder::findOrFail($id);
+            // PHASE 2: Validate invoice type matches PO type
+            if ($validated['invoice_type'] !== $purchaseOrder->type) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Invoice type mismatch. This is a {$purchaseOrder->type} Purchase Order, but you provided a {$validated['invoice_type']} invoice. GST invoices are required for GST POs, and Non-GST invoices for Non-GST POs."
+                ], 422);
+            }
 
             // Delete old invoice if exists
             if ($purchaseOrder->invoice_file) {
@@ -222,11 +264,12 @@ class PurchaseOrderController extends Controller
             $path = $request->file('invoice')->store('purchase_orders/invoices', 'public');
             
             $purchaseOrder->invoice_file = $path;
+            $purchaseOrder->invoice_type = $validated['invoice_type'];
             $purchaseOrder->save();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Invoice uploaded successfully',
+                'message' => 'Invoice uploaded and validated successfully',
                 'data' => $purchaseOrder
             ]);
 

@@ -9,11 +9,15 @@ class Material extends Model
 {
     use HasFactory;
 
+    const GST_TYPE_GST = 'gst';
+    const GST_TYPE_NON_GST = 'non_gst';
+
     public $timestamps = false;
 
     protected $fillable = [
         'name',
         'unit',
+        'gst_type',
         'gst_percentage',
     ];
 
@@ -22,6 +26,17 @@ class Material extends Model
         return [
             'gst_percentage' => 'decimal:2',
         ];
+    }
+
+    // Helper methods
+    public function isGstApplicable()
+    {
+        return $this->gst_type === self::GST_TYPE_GST;
+    }
+
+    public function isNonGst()
+    {
+        return $this->gst_type === self::GST_TYPE_NON_GST;
     }
 
     public function materialRequestItems()

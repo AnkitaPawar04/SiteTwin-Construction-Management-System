@@ -69,12 +69,20 @@ http://localhost:8000/api
 
 ## Material Endpoints
 
+> **🆕 PHASE 2**: Materials now require `gst_type` classification (gst/non_gst)
+
 | Method | Endpoint | Description | Auth Required | Roles |
 |--------|----------|-------------|---------------|-------|
 | GET | `/materials` | List all materials | ✅ | All |
-| POST | `/materials` | Create material | ✅ | Manager, Owner |
+| POST | `/materials` | Create material (requires gst_type) | ✅ | Manager, Owner |
 | GET | `/materials/{id}` | Get material details | ✅ | All |
 | PUT/PATCH | `/materials/{id}` | Update material | ✅ | Manager, Owner |
+
+**Material Fields:**
+- `name`: Material name
+- `unit`: Unit of measurement
+- `gst_type`: 'gst' or 'non_gst' (required)
+- `gst_percentage`: GST percentage (required if gst_type='gst', auto-set to 0 if non_gst)
 
 ---
 
@@ -107,6 +115,11 @@ http://localhost:8000/api
 
 ## Purchase Order Endpoints
 
+> **🆕 PHASE 2 RULES**:  
+> - **GST/Non-GST Separation**: Cannot mix GST and Non-GST materials in same PO
+> - **Auto-Detection**: PO type automatically determined from materials
+> - **Invoice Validation**: GST invoices required for GST POs, Non-GST for Non-GST POs
+
 | Method | Endpoint | Description | Auth Required | Roles |
 |--------|----------|-------------|---------------|-------|
 | GET | `/purchase-orders` | List purchase orders | ✅ | Purchase Manager, Manager, Owner |
@@ -115,6 +128,12 @@ http://localhost:8000/api
 | PATCH | `/purchase-orders/{id}/status` | Update PO status | ✅ | Purchase Manager, Manager |
 | POST | `/purchase-orders/{id}/invoice` | Upload vendor invoice | ✅ | Purchase Manager |
 | DELETE | `/purchase-orders/{id}` | Delete PO (created only) | ✅ | Purchase Manager |
+
+**PO Creation Rules:**
+- `type` field removed - auto-detected from materials
+- All materials in PO must have same `gst_type`
+- GST percentage auto-applied from material master
+- Invoice upload requires matching `invoice_type` (gst/non_gst)
 
 ---
 

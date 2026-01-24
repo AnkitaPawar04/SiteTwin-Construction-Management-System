@@ -23,10 +23,17 @@ class MaterialController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'unit' => 'required|string|max:50',
-            'gst_percentage' => 'required|numeric|min:0|max:100',
+            'gst_type' => 'required|in:gst,non_gst',
+            'gst_percentage' => 'required_if:gst_type,gst|numeric|min:0|max:100',
         ]);
 
-        $material = Material::create($request->all());
+        // If non-GST, force gst_percentage to 0
+        $data = $request->all();
+        if ($data['gst_type'] === 'non_gst') {
+            $data['gst_percentage'] = 0;
+        }
+
+        $material = Material::create($data);
 
         return response()->json([
             'success' => true,
@@ -50,11 +57,30 @@ class MaterialController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'unit' => 'sometimes|string|max:50',
+            'gst_type' => 'sometimes|in:gst,non_gst',
             'gst_percentage' => 'sometimes|numeric|min:0|max:100',
         ]);
 
         $material = Material::findOrFail($id);
-        $material->update($request->all());
+        
+        $data = $request->all();
+        
+        // If changing to non-GST, force gst_percentage to 0
+        if (isset($data['gst_type']) && $data['gst_type'] === 'non_gst') {
+            $data['gst_percentage'] = 0;
+        }
+        
+        // If changing to GST and no percentage provided, require it
+        if (isset($data['gst_type']) && $data['gst_type'] === 'gst' && !isset($data['gst_percentage'])) {
+            if ($material->gst_percentage == 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'GST percentage is required for GST materials'
+                ], 422);
+            }
+        }
+        
+        $material->update($data);
 
         return response()->json([
             'success' => true,

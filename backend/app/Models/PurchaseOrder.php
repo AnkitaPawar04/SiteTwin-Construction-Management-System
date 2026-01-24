@@ -31,6 +31,7 @@ class PurchaseOrder extends Model
         'gst_amount',
         'grand_total',
         'invoice_file',
+        'invoice_type',
         'approved_at',
         'delivered_at',
         'closed_at',
