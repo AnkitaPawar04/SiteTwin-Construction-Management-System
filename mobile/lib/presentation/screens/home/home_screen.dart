@@ -68,13 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Text(_getTitle(loc, _currentIndex, user.role)),
-            const SizedBox(width: 8),
-            const ProjectBadge(),
-          ],
-        ),
+        title: Text(_getTitle(loc, _currentIndex, user.role)),
         actions: [
           const ProjectSwitcher(),
           IconButton(
@@ -462,8 +456,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       );
-    } else if (user.role == 'manager' || user.role == 'owner') {
-      // Manager and Owner get two tabs (Dashboard, Tasks)
+    } else if (user.role == 'manager') {
+      // Manager gets two tabs (Dashboard, Tasks)
       return BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
@@ -481,7 +475,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
     
-    // No bottom navigation for other roles
+    // Owner gets no bottom navigation - uses drawer only
     return null;
   }
 }

@@ -31,39 +31,28 @@ class DashboardScreen extends ConsumerWidget {
     final user = ref.watch(authStateProvider);
     final dashboardData = ref.watch(dashboardDataProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(dashboardDataProvider),
-          ),
-        ],
-      ),
-      body: dashboardData.when(
-        data: (data) {
-          if (data == null) {
-            return const Center(child: Text('No dashboard data available'));
-          }
-          return RefreshIndicator(
-            onRefresh: () async => ref.refresh(dashboardDataProvider.future),
-            child: _buildDashboardContent(context, ref, user, data),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Failed to load dashboard: $error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(dashboardDataProvider),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+    return dashboardData.when(
+      data: (data) {
+        if (data == null) {
+          return const Center(child: Text('No dashboard data available'));
+        }
+        return RefreshIndicator(
+          onRefresh: () async => ref.refresh(dashboardDataProvider.future),
+          child: _buildDashboardContent(context, ref, user, data),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Failed to load dashboard: $error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(dashboardDataProvider),
+              child: const Text('Retry'),
+            ),
+          ],
         ),
       ),
     );
