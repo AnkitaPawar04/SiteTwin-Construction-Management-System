@@ -40,12 +40,33 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
   int? _selectedProjectId;
-  int? _selectedTaskId;
+  final List<int> _selectedTaskIds = []; // Changed to list for multiple selections
   
   @override
   void initState() {
     super.initState();
-    _selectedTaskId = widget.preSelectedTaskId;
+    // Pre-selected task will be handled after tasks load
+  }
+  
+  // Auto-select project and task when pre-selected task is provided
+  void _handlePreSelectedTask(List<TaskModel> tasks) {
+    if (widget.preSelectedTaskId != null && _selectedProjectId == null) {
+      final preSelectedTask = tasks.firstWhere(
+        (task) => task.id == widget.preSelectedTaskId,
+        orElse: () => tasks.first,
+      );
+      
+      if (preSelectedTask.id != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _selectedProjectId = preSelectedTask.projectId;
+              _selectedTaskIds.add(preSelectedTask.id!);
+            });
+          }
+        });
+      }
+    }
   }
   
   @override
@@ -129,10 +150,10 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
   Future<void> _submitDpr() async {
     if (!_formKey.currentState!.validate()) return;
     
-    if (_selectedTaskId == null) {
+    if (_selectedTaskIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a task'),
+          content: Text('Please select at least one task'),
           backgroundColor: AppTheme.errorColor,
         ),
       );
@@ -170,7 +191,7 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
       final repo = ref.read(dprRepositoryProvider);
       await repo.submitDpr(
         projectId: _selectedProjectId!,
-        taskId: _selectedTaskId,
+        taskIds: _selectedTaskIds, // Changed to pass list
         workDescription: _workDescriptionController.text.trim(),
         latitude: position.latitude,
         longitude: position.longitude,
@@ -214,10 +235,10 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            // Task Selection (Primary)
-            tasksAsync.when(
-              data: (tasks) {
-                if (tasks.isEmpty) {
+            // Project Selection (Primary - Must select first)
+            projectsAsync.when(
+              data: (projects) {
+                if (projects.isEmpty) {
                   return Card(
                     color: Colors.orange[50],
                     child: Padding(
@@ -227,38 +248,14 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
                           Icon(Icons.info_outline, color: Colors.orange[700]),
                           const SizedBox(height: 8),
                           Text(
-                            'No in-progress tasks available',
+                            'No projects available',
                             style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Start a task first to submit a DPR',
-                            style: TextStyle(color: Colors.grey[700], fontSize: 12),
                           ),
                         ],
                       ),
                     ),
                   );
                 }
-                
-                // Auto-select the pre-selected task or first task
-                if (_selectedTaskId == null && tasks.isNotEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() {
-                        _selectedTaskId = widget.preSelectedTaskId ?? tasks.first.id;
-                        // Set project from selected task
-                        final selectedTask = tasks.firstWhere((t) => t.id == _selectedTaskId);
-                        _selectedProjectId = selectedTask.projectId;
-                      });
-                    }
-                  });
-                }
-                
-                final selectedTask = tasks.firstWhere(
-                  (t) => t.id == _selectedTaskId,
-                  orElse: () => tasks.first,
-                );
                 
                 return Card(
                   child: Padding(
@@ -267,76 +264,201 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         DropdownButtonFormField<int>(
-                          value: _selectedTaskId,
+                          value: _selectedProjectId,
                           decoration: const InputDecoration(
-                            labelText: 'Select Task *',
+                            labelText: 'Select Project *',
                             border: OutlineInputBorder(),
-                            helperText: 'Choose which task this report is for',
+                            helperText: 'Choose the project you are working on',
+                            prefixIcon: Icon(Icons.business),
                           ),
-                          items: tasks.map((task) {
+                          items: projects.map((project) {
                             return DropdownMenuItem<int>(
-                              value: task.id,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    task.title,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  if (task.projectName != null)
-                                    Text(
-                                      task.projectName!,
-                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                    ),
-                                ],
+                              value: project.id,
+                              child: Text(
+                                project.name,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
                             );
                           }).toList(),
                           onChanged: (value) {
-                            if (value != null) {
-                              setState(() {
-                                _selectedTaskId = value;
-                                // Update project when task changes
-                                final task = tasks.firstWhere((t) => t.id == value);
-                                _selectedProjectId = task.projectId;
-                              });
-                            }
+                            setState(() {
+                              _selectedProjectId = value;
+                              // Clear selected tasks when project changes
+                              _selectedTaskIds.clear();
+                            });
                           },
                           validator: (value) {
-                            if (value == null) return 'Please select a task';
+                            if (value == null) return 'Please select a project';
                             return null;
                           },
                         ),
-                        // Show task billing info if available
-                        if (selectedTask.billingAmount != null) ...[
-                          const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              loading: () => const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+              error: (error, stack) => Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text('Error loading projects: $error'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Task Selection (Shows only after project is selected)
+            if (_selectedProjectId == null)
+              Card(
+                color: Colors.blue[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.arrow_upward, color: Colors.blue[700]),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Please select a project first to see available tasks',
+                          style: TextStyle(color: Colors.blue[900]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              tasksAsync.when(
+              data: (tasks) {
+                // Handle pre-selected task
+                _handlePreSelectedTask(tasks);
+                
+                // Filter tasks by selected project
+                final projectTasks = tasks.where((task) => task.projectId == _selectedProjectId).toList();
+                
+                if (projectTasks.isEmpty) {
+                  return Card(
+                    color: Colors.orange[50],
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.orange[700]),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No in-progress tasks for this project',
+                            style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Start a task for this project first',
+                            style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                
+                // Calculate total billing amount for selected tasks
+                double totalBillingAmount = 0;
+                double totalWithGst = 0;
+                for (var taskId in _selectedTaskIds) {
+                  final task = projectTasks.firstWhere((t) => t.id == taskId, orElse: () => projectTasks.first);
+                  if (task.billingAmount != null) {
+                    totalBillingAmount += task.billingAmount!;
+                    final gstAmount = task.billingAmount! * ((task.gstPercentage ?? 18) / 100);
+                    totalWithGst += task.billingAmount! + gstAmount;
+                  }
+                }
+                
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.task_alt, color: Colors.blue[700]),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Select Tasks *',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap to select/deselect tasks completed today (${projectTasks.length} available)',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Task list with checkboxes
+                        ...projectTasks.where((task) => task.id != null).map((task) {
+                          final isSelected = _selectedTaskIds.contains(task.id!);
+                          return CheckboxListTile(
+                            value: isSelected,
+                            title: Text(
+                              task.title,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: task.billingAmount != null
+                                ? Text(
+                                    '₹${task.billingAmount!.toStringAsFixed(2)} + ${task.gstPercentage ?? 18}% GST',
+                                    style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                                  )
+                                : null,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true && task.id != null) {
+                                  _selectedTaskIds.add(task.id!);
+                                } else if (task.id != null) {
+                                  _selectedTaskIds.remove(task.id!);
+                                }
+                              });
+                            },
+                            contentPadding: EdgeInsets.zero,
+                          );
+                        }).toList(),
+                        
+                        // Show total billing info if tasks selected
+                        if (_selectedTaskIds.isNotEmpty && totalBillingAmount > 0) ...[
+                          const Divider(),
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.blue[50],
+                              color: Colors.green[50],
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue[200]!),
+                              border: Border.all(color: Colors.green[200]!),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.receipt_long, color: Colors.blue[700], size: 20),
+                                Icon(Icons.receipt_long, color: Colors.green[700], size: 20),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Auto-billing enabled',
+                                        'Total Invoice Value',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.blue[900],
+                                          color: Colors.green[900],
                                           fontSize: 12,
                                         ),
                                       ),
                                       Text(
-                                        '₹${selectedTask.billingAmount!.toStringAsFixed(2)} + ${selectedTask.gstPercentage ?? 18}% GST',
-                                        style: TextStyle(color: Colors.blue[700], fontSize: 11),
+                                        'Base: ₹${totalBillingAmount.toStringAsFixed(2)}  |  With GST: ₹${totalWithGst.toStringAsFixed(2)}',
+                                        style: TextStyle(color: Colors.green[700], fontSize: 11),
                                       ),
                                     ],
                                   ),
@@ -360,78 +482,6 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text('Error loading tasks: $error'),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Project Selection (Auto-filled from task)
-            projectsAsync.when(
-              data: (projects) {
-                final selectedProject = projects.firstWhere(
-                  (p) => p.id == _selectedProjectId,
-                  orElse: () => ProjectModel(
-                    id: 0,
-                    name: 'Unknown Project',
-                    description: '',
-                    location: '',
-                    startDate: '',
-                    endDate: '',
-                    // status: '',
-                    ownerId: 0,
-                    latitude: 0,
-                    longitude: 0,
-                  ),
-                );
-                
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Project',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.business, size: 18, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                selectedProject.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Auto-selected from task',
-                          style: TextStyle(fontSize: 11, color: Colors.grey[600], fontStyle: FontStyle.italic),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-              loading: () => const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ),
-              error: (error, stack) => Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text('Error loading projects: $error'),
                 ),
               ),
             ),

@@ -26,19 +26,22 @@ class DprRepository {
     required double latitude,
     required double longitude,
     required List<String> photoPaths,
-    int? taskId,
+    List<int>? taskIds, // Changed to list
+    int? taskId, // Keep for backward compatibility
     double? billingAmount,
     double? gstPercentage,
   }) async {
     final date = DateTime.now().toIso8601String().split('T')[0];
     final isOnline = await _networkInfo.isConnected;
     
+    // Handle backward compatibility - convert single taskId to list
+    final effectiveTaskIds = taskIds ?? (taskId != null ? [taskId] : <int>[]);
+    
     if (isOnline) {
       try {
         // Create FormData for multipart upload
         final formData = FormData.fromMap({
           'project_id': projectId,
-          if (taskId != null) 'task_id': taskId,
           'work_description': workDescription,
           'report_date': date,
           'latitude': latitude,
@@ -46,6 +49,13 @@ class DprRepository {
           'billing_amount': billingAmount,
           'gst_percentage': gstPercentage,
         });
+        
+        // Add task IDs as array
+        if (effectiveTaskIds.isNotEmpty) {
+          for (int i = 0; i < effectiveTaskIds.length; i++) {
+            formData.fields.add(MapEntry('task_ids[$i]', effectiveTaskIds[i].toString()));
+          }
+        }
         
         // Add photos as multipart files
         for (int i = 0; i < photoPaths.length; i++) {
@@ -84,7 +94,7 @@ class DprRepository {
         localPhotoPaths: photoPaths,
         isSynced: false,
         localId: localId,
-        taskId: taskId,
+        taskId: effectiveTaskIds.isNotEmpty ? effectiveTaskIds.first : null, // Store first task for offline
         billingAmount: billingAmount,
         gstPercentage: gstPercentage,
       );

@@ -57,40 +57,40 @@ class InvoiceService
 
     public function generateInvoiceFromDpr($dpr)
     {
-        // Get task information if DPR is linked to a task
-        $task = $dpr->task;
+        // Get all tasks linked to this DPR
+        $tasks = $dpr->tasks;
         
-        // Calculate amount based on task's billing_amount (unit rate) or DPR's billing amount
-        $amount = 0;
-        $gstPercentage = 18.00; // Default GST
-        $description = "Work completed as per DPR dated " . ($dpr->report_date?->format('d M Y') ?? date('d M Y'));
-        
-        if ($task) {
-            // Use task's billing_amount (unit rate) and GST percentage
-            $amount = $task->billing_amount ?? 0;
-            $gstPercentage = $task->gst_percentage ?? 18.00;
-            $description = "Task: " . $task->title . " - " . $description;
-        } elseif ($dpr->billing_amount && $dpr->billing_amount > 0) {
-            // Fallback to DPR's billing amount if no task linked
-            $amount = $dpr->billing_amount;
-            $gstPercentage = $dpr->gst_percentage ?? 18.00;
-        }
-        
-        // Don't generate invoice if amount is zero
-        if ($amount <= 0) {
+        // If no tasks linked, return null
+        if ($tasks->isEmpty()) {
             return null;
         }
 
-        $items = [
-            [
-                'description' => $description,
-                'amount' => $amount,
-                'gst_percentage' => $gstPercentage,
-                'task_id' => $task?->id,
-            ]
-        ];
+        $items = [];
+        
+        // Create an invoice item for each task
+        foreach ($tasks as $task) {
+            $amount = $task->billing_amount ?? 0;
+            $gstPercentage = $task->gst_percentage ?? 18.00;
+            
+            if ($amount > 0) {
+                $items[] = [
+                    'description' => "Task: " . $task->title . " - Work completed as per DPR dated " . ($dpr->report_date?->format('d M Y') ?? date('d M Y')),
+                    'amount' => $amount,
+                    'gst_percentage' => $gstPercentage,
+                    'task_id' => $task->id,
+                ];
+            }
+        }
 
-        return $this->generateInvoice($dpr->project_id, $items, $task?->id, $dpr->id);
+        // Don't generate invoice if no valid items
+        if (empty($items)) {
+            return null;
+        }
+
+        // Use the first task's ID for backward compatibility, or null if no items
+        $firstTaskId = $items[0]['task_id'] ?? null;
+
+        return $this->generateInvoice($dpr->project_id, $items, $firstTaskId, $dpr->id);
     }
 
     public function generateInvoiceFromTask($task)

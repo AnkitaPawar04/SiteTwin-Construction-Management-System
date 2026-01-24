@@ -44,6 +44,14 @@ class DprController extends Controller
         $this->authorize('create', DailyProgressReport::class);
 
         try {
+            // Convert task_id or task_ids to array
+            $taskIds = [];
+            if ($request->has('task_ids') && is_array($request->task_ids)) {
+                $taskIds = $request->task_ids;
+            } elseif ($request->has('task_id')) {
+                $taskIds = [$request->task_id];
+            }
+
             $dpr = $this->dprService->createDpr(
                 $request->user()->id,
                 $request->project_id,
@@ -51,7 +59,7 @@ class DprController extends Controller
                 $request->latitude,
                 $request->longitude,
                 $request->photos ?? [],
-                $request->task_id ?? null
+                $taskIds
             );
 
             return response()->json([

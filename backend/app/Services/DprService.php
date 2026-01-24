@@ -18,19 +18,23 @@ class DprService
     {
         $this->invoiceService = $invoiceService;
     }
-    public function createDpr($userId, $projectId, $workDescription, $latitude, $longitude, $photos = [], $taskId = null)
+    public function createDpr($userId, $projectId, $workDescription, $latitude, $longitude, $photos = [], $taskIds = [])
     {
-        return DB::transaction(function () use ($userId, $projectId, $workDescription, $latitude, $longitude, $photos, $taskId) {
+        return DB::transaction(function () use ($userId, $projectId, $workDescription, $latitude, $longitude, $photos, $taskIds) {
             $dpr = DailyProgressReport::create([
                 'user_id' => $userId,
                 'project_id' => $projectId,
-                'task_id' => $taskId,
                 'work_description' => $workDescription,
                 'report_date' => Carbon::today()->toDateString(),
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'status' => DailyProgressReport::STATUS_SUBMITTED,
             ]);
+
+            // Attach tasks to DPR (many-to-many relationship)
+            if (!empty($taskIds)) {
+                $dpr->tasks()->attach($taskIds);
+            }
 
             // Add photos - store files and save paths
             if (!empty($photos)) {
@@ -56,7 +60,7 @@ class DprService
                 'status' => Approval::STATUS_PENDING,
             ]);
 
-            return $dpr->load('photos');
+            return $dpr->load('photos', 'tasks');
         });
     }
 
