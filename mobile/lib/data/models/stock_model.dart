@@ -31,14 +31,14 @@ class StockModel {
 
   factory StockModel.fromJson(Map<String, dynamic> json) {
     // Check if this is from the new getAllStock API (Phase 3 format)
-    if (json.containsKey('material_name') && json.containsKey('current_stock')) {
+    if (json.containsKey('material_name') && json.containsKey('total_stock')) {
       return StockModel(
         id: (json['material_id'] as num?)?.toInt() ?? 0,
         projectId: 0, // Not available in this format
         materialId: (json['material_id'] as num?)?.toInt() ?? 0,
-        availableQuantity: (json['current_stock'] is String)
-            ? double.tryParse(json['current_stock']) ?? 0.0
-            : (json['current_stock'] as num?)?.toDouble() ?? 0.0,
+        availableQuantity: (json['total_stock'] is String)
+            ? double.tryParse(json['total_stock']) ?? 0.0
+            : (json['total_stock'] as num?)?.toDouble() ?? 0.0,
         materialName: json['material_name'] as String?,
         materialUnit: json['unit'] as String?,
         projectName: null,

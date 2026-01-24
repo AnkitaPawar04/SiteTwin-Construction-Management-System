@@ -206,7 +206,7 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
+                      child: ExpansionTile(
                         leading: CircleAvatar(
                           backgroundColor: isLowStock ? Colors.orange : AppTheme.primaryColor,
                           child: const Icon(
@@ -222,55 +222,31 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),
-                            // TODO: Show GST badge when material has GST type
-                            // Container(
-                            //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            //   decoration: BoxDecoration(
-                            //     color: item.gstType == 'GST' ? Colors.blue[50] : Colors.orange[50],
-                            //     borderRadius: BorderRadius.circular(4),
-                            //   ),
-                            //   child: Text(
-                            //     item.gstType,
-                            //     style: TextStyle(
-                            //       fontSize: 10,
-                            //       fontWeight: FontWeight.bold,
-                            //       color: item.gstType == 'GST' ? Colors.blue[700] : Colors.orange[700],
-                            //     ),
-                            //   ),
-                            // ),
-                          ],
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.projectName ?? 'Project #${item.projectId}'),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.access_time,
-                                  size: 12,
-                                  color: Colors.grey[600],
+                            if (item.gstType != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: item.gstType == 'GST' ? Colors.blue[50] : Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Updated: ${_formatDate(item.updatedAt ?? '')}',
+                                child: Text(
+                                  item.gstType!,
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: item.gstType == 'GST' ? Colors.blue[700] : Colors.orange[700],
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
                           ],
                         ),
-                        isThreeLine: true,
+                        subtitle: Text('Total: ${item.availableQuantity.toInt()} ${item.materialUnit ?? 'units'}'),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '${item.availableQuantity}',
+                              '${item.availableQuantity.toInt()}',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -283,6 +259,48 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
                             ),
                           ],
                         ),
+                        children: [
+                          if (item.projectWiseStock != null && item.projectWiseStock!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Project-wise Breakdown:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...item.projectWiseStock!.map((projectStock) => 
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              projectStock.projectName,
+                                              style: const TextStyle(fontSize: 13),
+                                            ),
+                                          ),
+                                          Text(
+                                            '${projectStock.stock.toInt()} ${item.materialUnit ?? 'units'}',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ).toList(),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
                     );
                   },

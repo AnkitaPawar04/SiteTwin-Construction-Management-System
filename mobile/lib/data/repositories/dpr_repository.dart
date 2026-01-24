@@ -239,7 +239,7 @@ class DprRepository {
       // Cache projects for offline use
       await _projectBox.clear();
       for (var project in projects) {
-        await _projectBox.add(project);
+        await _projectBox.put(project.id, project);
       }
       AppLogger.info('Projects cached: ${projects.length}');
       

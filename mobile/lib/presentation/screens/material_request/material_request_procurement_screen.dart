@@ -43,14 +43,22 @@ class _MaterialRequestProcurementScreenState
     setState(() => _isLoading = true);
     
     try {
-      // TODO: Load actual stock levels from repository
-      // For now, using placeholder data
-      // final stockRepo = ref.read(materialRequestRepositoryProvider);
-      // _stockAvailability = await stockRepo.getStockLevels(materialIds);
+      // Load actual stock levels from repository
+      final stockRepo = ref.read(stockRepositoryProvider);
+      final stockList = await stockRepo.getAllStock();
       
-      // Placeholder: simulate stock availability
+      // Build map of material ID to total available stock
       for (var item in widget.materialRequest.items) {
-        _stockAvailability[item.materialId] = 0; // Will be updated with real data
+        int totalStock = 0;
+        
+        // Find stock entries for this material
+        for (var stock in stockList) {
+          if (stock.materialId == item.materialId) {
+            totalStock += stock.availableQuantity.toInt();
+          }
+        }
+        
+        _stockAvailability[item.materialId] = totalStock;
       }
       
       setState(() {});
@@ -350,14 +358,14 @@ class _MaterialRequestProcurementScreenState
                                       Expanded(
                                         child: _buildStockInfo(
                                           'Requested',
-                                          '${item.quantity} ${item.unit ?? 'units'}',
+                                          '${item.quantity.toInt()} ${item.unit ?? 'units'}',
                                           Colors.blue,
                                         ),
                                       ),
                                       Expanded(
                                         child: _buildStockInfo(
                                           'Available',
-                                          '$available ${item.unit ?? 'units'}',
+                                          '${available.toInt()} ${item.unit ?? 'units'}',
                                           stockColor,
                                         ),
                                       ),

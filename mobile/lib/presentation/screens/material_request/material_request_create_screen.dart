@@ -328,74 +328,38 @@ class _MaterialRequestCreateScreenState
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  initialValue: item.quantity.toString(),
-                  decoration: InputDecoration(
-                    labelText: 'Quantity (${item.material.unit})',
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    final quantity = int.tryParse(value) ?? item.quantity;
-                    setState(() {
-                      _items[index] = _MaterialRequestItem(
-                        material: item.material,
-                        quantity: quantity,
-                      );
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Required';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Invalid number';
-                    }
-                    if (int.parse(value) <= 0) {
-                      return 'Must be > 0';
-                    }
-                    return null;
-                  },
-                ),
+          TextFormField(
+            initialValue: item.quantity.toString(),
+            decoration: InputDecoration(
+              labelText: 'Quantity (${item.material.unit})',
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Price',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₹${(item.material.unitPrice * item.quantity).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              final quantity = int.tryParse(value) ?? item.quantity;
+              setState(() {
+                _items[index] = _MaterialRequestItem(
+                  material: item.material,
+                  quantity: quantity,
+                );
+              });
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Required';
+              }
+              if (int.tryParse(value) == null) {
+                return 'Invalid number';
+              }
+              if (int.parse(value) <= 0) {
+                return 'Must be > 0';
+              }
+              return null;
+            },
           ),
         ],
       ),

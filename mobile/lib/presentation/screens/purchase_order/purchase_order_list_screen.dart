@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/core/constants/app_constants.dart';
 import 'package:mobile/data/models/purchase_order_model.dart';
+import 'package:mobile/providers/providers.dart';
 
 /// Purchase Order List Screen
 /// Shows all purchase orders with status filtering
@@ -30,11 +31,12 @@ class _PurchaseOrderListScreenState
     setState(() => _isLoading = true);
     
     try {
-      // TODO: Load from repository
-      // Placeholder data for now
-      _purchaseOrders = [];
+      final repository = ref.read(purchaseOrderRepositoryProvider);
+      final pos = await repository.getAllPurchaseOrders();
       
-      setState(() {});
+      setState(() {
+        _purchaseOrders = pos;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
