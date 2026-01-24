@@ -141,8 +141,8 @@ class MaterialRequestController extends Controller
 
     public function pending(Request $request)
     {
-        // Only managers and owners can see pending requests
-        if (!$request->user()->isManager() && !$request->user()->isOwner()) {
+        // Only managers, owners, and purchase managers can see pending requests
+        if (!$request->user()->isManager() && !$request->user()->isOwner() && !$request->user()->isPurchaseManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized access'
@@ -192,6 +192,46 @@ class MaterialRequestController extends Controller
                 'success' => true,
                 'message' => 'Material received and added to stock successfully',
                 'data' => $materialRequest
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Mark material request as reviewed (Purchase Manager action)
+     */
+    public function review(Request $request, $id)
+    {
+        $materialRequest = MaterialRequest::findOrFail($id);
+
+        // Only purchase managers can mark as reviewed
+        if (!$request->user()->isPurchaseManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only Purchase Managers can review material requests'
+            ], 403);
+        }
+
+        // Can only review pending requests
+        if ($materialRequest->status !== MaterialRequest::STATUS_PENDING) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only pending material requests can be reviewed'
+            ], 422);
+        }
+
+        try {
+            $materialRequest->status = MaterialRequest::STATUS_REVIEWED;
+            $materialRequest->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Material request marked as reviewed',
+                'data' => $materialRequest->load(['items.material', 'project', 'requestedBy'])
             ]);
         } catch (\Exception $e) {
             return response()->json([

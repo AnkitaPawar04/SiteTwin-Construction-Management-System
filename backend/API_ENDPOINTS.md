@@ -80,13 +80,41 @@ http://localhost:8000/api
 
 ## Material Request Endpoints
 
+> **⚠️ UPDATED FLOW**: Material requests now follow PENDING → REVIEWED → APPROVED/REJECTED workflow
+
 | Method | Endpoint | Description | Auth Required | Roles |
 |--------|----------|-------------|---------------|-------|
 | GET | `/material-requests` | List material requests | ✅ | All |
 | POST | `/material-requests` | Create material request | ✅ | Engineer, Manager |
 | GET | `/material-requests/{id}` | Get request details | ✅ | All |
+| POST | `/material-requests/{id}/review` | Mark as reviewed | ✅ | Purchase Manager |
 | POST | `/material-requests/{id}/approve` | Approve/Reject request | ✅ | Manager |
-| GET | `/material-requests/pending/all` | Get pending requests | ✅ | Manager |
+| GET | `/material-requests/pending/all` | Get pending requests | ✅ | Manager, Purchase Manager |
+
+---
+
+## Vendor Endpoints
+
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| GET | `/vendors` | List all vendors | ✅ | Purchase Manager, Manager, Owner |
+| POST | `/vendors` | Create vendor | ✅ | Purchase Manager, Manager |
+| GET | `/vendors/{id}` | Get vendor details | ✅ | Purchase Manager, Manager, Owner |
+| PUT/PATCH | `/vendors/{id}` | Update vendor | ✅ | Purchase Manager, Manager |
+| DELETE | `/vendors/{id}` | Delete vendor | ✅ | Purchase Manager |
+
+---
+
+## Purchase Order Endpoints
+
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| GET | `/purchase-orders` | List purchase orders | ✅ | Purchase Manager, Manager, Owner |
+| POST | `/purchase-orders` | Create purchase order | ✅ | Purchase Manager |
+| GET | `/purchase-orders/{id}` | Get PO details | ✅ | Purchase Manager, Manager, Owner |
+| PATCH | `/purchase-orders/{id}/status` | Update PO status | ✅ | Purchase Manager, Manager |
+| POST | `/purchase-orders/{id}/invoice` | Upload vendor invoice | ✅ | Purchase Manager |
+| DELETE | `/purchase-orders/{id}` | Delete PO (created only) | ✅ | Purchase Manager |
 
 ---
 
@@ -103,12 +131,13 @@ http://localhost:8000/api
 
 ## Invoice Endpoints
 
+> **⚠️ DEPRECATED**: Task/DPR-based invoice generation has been disabled. The system now uses Purchase Order-driven procurement with vendor invoices.
+
 | Method | Endpoint | Description | Auth Required | Roles |
 |--------|----------|-------------|---------------|-------|
-| GET | `/invoices/project/{projectId}` | Get project invoices | ✅ | Manager, Owner |
-| POST | `/invoices` | Generate invoice | ✅ | Manager, Owner |
-| GET | `/invoices/{id}` | Get invoice details | ✅ | Manager, Owner |
-| POST | `/invoices/{id}/mark-paid` | Mark invoice as paid | ✅ | Manager, Owner |
+| GET | `/invoices/project/{projectId}` | Get project invoices (legacy) | ✅ | Manager, Owner |
+| GET | `/invoices/{id}` | Get invoice details (legacy) | ✅ | Manager, Owner |
+| POST | `/invoices/{id}/mark-paid` | Mark invoice as paid (legacy) | ✅ | Manager, Owner |
 
 ---
 
@@ -240,7 +269,7 @@ Configure in `config/cors.php` for mobile app integration:
 
 ---
 
-## Total Endpoints: 54
+## Total Endpoints: 68
 
 - Authentication: 3
 - Projects: 7
@@ -248,9 +277,11 @@ Configure in `config/cors.php` for mobile app integration:
 - Tasks: 6
 - DPR: 5
 - Materials: 4
-- Material Requests: 5
+- Material Requests: 6 (updated with review)
+- Vendors: 5 (new)
+- Purchase Orders: 6 (new)
 - Stock: 4
-- Invoices: 4
+- Invoices: 3 (deprecated, legacy support)
 - Dashboard: 1
 - Notifications: 4
 - Offline Sync: 3

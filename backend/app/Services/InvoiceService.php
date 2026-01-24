@@ -7,6 +7,11 @@ use App\Models\InvoiceItem;
 use App\Models\Material;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * DEPRECATED: Task/DPR-based invoice generation is disabled.
+ * The system now uses Purchase Order-driven procurement and cost management.
+ * Invoices will be managed through vendor invoices linked to Purchase Orders.
+ */
 class InvoiceService
 {
     public function generateInvoice($projectId, array $items, $taskId = null, $dprId = null)
@@ -55,60 +60,24 @@ class InvoiceService
         });
     }
 
+    /**
+     * DEPRECATED: DPR-based invoice generation is disabled.
+     * System now uses PO-based procurement.
+     */
     public function generateInvoiceFromDpr($dpr)
     {
-        // Get all tasks linked to this DPR
-        $tasks = $dpr->tasks;
-        
-        // If no tasks linked, return null
-        if ($tasks->isEmpty()) {
-            return null;
-        }
-
-        $items = [];
-        
-        // Create an invoice item for each task
-        foreach ($tasks as $task) {
-            $amount = $task->billing_amount ?? 0;
-            $gstPercentage = $task->gst_percentage ?? 18.00;
-            
-            if ($amount > 0) {
-                $items[] = [
-                    'description' => "Task: " . $task->title . " - Work completed as per DPR dated " . ($dpr->report_date?->format('d M Y') ?? date('d M Y')),
-                    'amount' => $amount,
-                    'gst_percentage' => $gstPercentage,
-                    'task_id' => $task->id,
-                ];
-            }
-        }
-
-        // Don't generate invoice if no valid items
-        if (empty($items)) {
-            return null;
-        }
-
-        // Use the first task's ID for backward compatibility, or null if no items
-        $firstTaskId = $items[0]['task_id'] ?? null;
-
-        return $this->generateInvoice($dpr->project_id, $items, $firstTaskId, $dpr->id);
+        // Disabled: Task/DPR-based billing removed
+        return null;
     }
 
+    /**
+     * DEPRECATED: Task-based invoice generation is disabled.
+     * System now uses PO-based procurement.
+     */
     public function generateInvoiceFromTask($task)
     {
-        if (!$task->billing_amount || $task->billing_amount <= 0) {
-            return null;
-        }
-
-        $items = [
-            [
-                'description' => "Task completed: " . $task->title,
-                'amount' => $task->billing_amount,
-                'gst_percentage' => $task->gst_percentage ?? 18.00,
-                'task_id' => $task->id,
-            ]
-        ];
-
-        return $this->generateInvoice($task->project_id, $items, $task->id);
+        // Disabled: Task-based billing removed
+        return null;
     }
 
     public function markAsPaid($invoiceId)

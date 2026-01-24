@@ -9,11 +9,15 @@ use App\Models\Task;
 use App\Models\DailyProgressReport;
 use App\Models\MaterialRequest;
 use App\Models\Attendance;
+use App\Models\PurchaseOrder;
+use App\Models\Vendor;
 use App\Policies\ProjectPolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\DailyProgressReportPolicy;
 use App\Policies\MaterialRequestPolicy;
 use App\Policies\AttendancePolicy;
+use App\Policies\PurchaseOrderPolicy;
+use App\Policies\VendorPolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +32,8 @@ class AppServiceProvider extends ServiceProvider
         DailyProgressReport::class => DailyProgressReportPolicy::class,
         MaterialRequest::class => MaterialRequestPolicy::class,
         Attendance::class => AttendancePolicy::class,
+        PurchaseOrder::class => PurchaseOrderPolicy::class,
+        Vendor::class => VendorPolicy::class,
     ];
 
     /**

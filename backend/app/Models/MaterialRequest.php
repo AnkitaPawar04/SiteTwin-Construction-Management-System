@@ -10,6 +10,7 @@ class MaterialRequest extends Model
     use HasFactory;
 
     const STATUS_PENDING = 'pending';
+    const STATUS_REVIEWED = 'reviewed';
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
     const STATUS_RECEIVED = 'received';
@@ -68,5 +69,10 @@ class MaterialRequest extends Model
     public function approval()
     {
         return $this->morphOne(Approval::class, 'reference');
+    }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
     }
 }

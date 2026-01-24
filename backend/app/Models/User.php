@@ -15,6 +15,7 @@ class User extends Authenticatable
     const ROLE_ENGINEER = 'engineer';
     const ROLE_MANAGER = 'manager';
     const ROLE_OWNER = 'owner';
+    const ROLE_PURCHASE_MANAGER = 'purchase_manager';
 
     public $timestamps = false;
 
@@ -109,6 +110,11 @@ class User extends Authenticatable
     public function isOwner()
     {
         return $this->role === self::ROLE_OWNER;
+    }
+
+    public function isPurchaseManager()
+    {
+        return $this->role === self::ROLE_PURCHASE_MANAGER;
     }
 
     public function hasAccessToProject($projectId)

@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OfflineSyncController;
+use App\Http\Controllers\Api\VendorController;
+use App\Http\Controllers\Api\PurchaseOrderController;
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -66,6 +68,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/material-requests/{id}/approve', [MaterialRequestController::class, 'approve']);
     Route::post('/material-requests/{id}/receive', [MaterialRequestController::class, 'receive']);
     Route::patch('/material-requests/{id}/status', [MaterialRequestController::class, 'updateStatus']);
+    Route::post('/material-requests/{id}/review', [MaterialRequestController::class, 'review']);
+
+    // Vendor routes
+    Route::apiResource('vendors', VendorController::class);
+
+    // Purchase Order routes
+    Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+    Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
+    Route::get('/purchase-orders/{id}', [PurchaseOrderController::class, 'show']);
+    Route::patch('/purchase-orders/{id}/status', [PurchaseOrderController::class, 'updateStatus']);
+    Route::post('/purchase-orders/{id}/invoice', [PurchaseOrderController::class, 'uploadInvoice']);
+    Route::delete('/purchase-orders/{id}', [PurchaseOrderController::class, 'destroy']);
 
     // Stock routes
     Route::get('/stock', [StockController::class, 'allStock']);
