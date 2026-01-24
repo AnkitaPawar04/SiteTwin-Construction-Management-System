@@ -15,6 +15,10 @@ class AuthRepository {
   
   Future<Map<String, dynamic>> login(String phone) async {
     try {
+      // Clear any previous session data before logging in
+      AppLogger.info('Clearing previous session before login');
+      await _clearLocalData();
+      
       final response = await _apiClient.post(
         ApiConstants.login,
         data: {'phone': phone},
@@ -43,10 +47,17 @@ class AuthRepository {
   Future<void> logout() async {
     try {
       AppLogger.info('Sending logout request to ${ApiConstants.logout}');
-      await _apiClient.post(ApiConstants.logout);
+      await _apiClient.post(ApiConstants.logout).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          AppLogger.warning('Logout API request timed out');
+          throw Exception('Logout request timed out');
+        },
+      );
       AppLogger.info('Logout request completed successfully');
     } catch (e) {
       AppLogger.warning('Logout API call failed: $e');
+      // Continue with local cleanup even if API call fails
     } finally {
       await _clearLocalData();
       AppLogger.info('Logged out successfully - local data cleared');
@@ -54,30 +65,42 @@ class AuthRepository {
   }
 
   Future<void> _clearLocalData() async {
+    AppLogger.info('Clearing all local data...');
+    
     // Clear shared preferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().toList();
+      for (var key in keys) {
+        await prefs.remove(key);
+      }
+      AppLogger.info('Cleared ${keys.length} SharedPreferences keys');
+    } catch (e) {
+      AppLogger.warning('Error clearing SharedPreferences', e);
+    }
 
     // Clear typed Hive boxes that are opened in the app lifecycle
     try {
-      if (Hive.isBoxOpen(AppConstants.attendanceBox)) {
-        await Hive.box<dynamic>(AppConstants.attendanceBox).clear();
-      }
-      if (Hive.isBoxOpen(AppConstants.taskBox)) {
-        await Hive.box<dynamic>(AppConstants.taskBox).clear();
-      }
-      if (Hive.isBoxOpen(AppConstants.dprBox)) {
-        await Hive.box<dynamic>(AppConstants.dprBox).clear();
-      }
-      if (Hive.isBoxOpen(AppConstants.materialRequestBox)) {
-        await Hive.box<dynamic>(AppConstants.materialRequestBox).clear();
-      }
-      if (Hive.isBoxOpen(AppConstants.syncQueueBox)) {
-        await Hive.box<dynamic>(AppConstants.syncQueueBox).clear();
+      final boxesToClear = [
+        AppConstants.attendanceBox,
+        AppConstants.taskBox,
+        AppConstants.dprBox,
+        AppConstants.materialRequestBox,
+        AppConstants.syncQueueBox,
+      ];
+      
+      for (var boxName in boxesToClear) {
+        if (Hive.isBoxOpen(boxName)) {
+          final box = Hive.box<dynamic>(boxName);
+          await box.clear();
+          AppLogger.info('Cleared Hive box: $boxName');
+        }
       }
     } catch (e) {
       AppLogger.warning('Error clearing Hive boxes', e);
     }
+    
+    AppLogger.info('Local data cleared successfully');
   }
   
   Future<UserModel?> getCurrentUser() async {

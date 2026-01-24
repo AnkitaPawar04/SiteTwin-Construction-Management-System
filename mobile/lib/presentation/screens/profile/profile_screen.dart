@@ -316,8 +316,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (isConfirmed != true || !mounted) return;
 
     try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Logging out...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      
       await ref.read(logoutActionProvider.future);
+      
+      // Wait a bit to ensure everything is cleared
+      await Future.delayed(const Duration(milliseconds: 300));
+      
       if (!mounted) return;
+      
       // Navigate to login screen and remove all routes
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/login',

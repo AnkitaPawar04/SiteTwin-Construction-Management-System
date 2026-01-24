@@ -402,9 +402,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               if (confirm == true) {
                 if (!context.mounted) return;
                 Navigator.pop(context); // Close drawer first
+                
                 try {
+                  // Show loading indicator
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Logging out...'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                  
                   await ref.read(logoutActionProvider.future);
-                  await Future.delayed(const Duration(milliseconds: 500)); // Wait for request to complete
+                  
+                  // Wait to ensure everything is cleared
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  
                   if (!context.mounted) return;
                   Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
                 } catch (e) {
