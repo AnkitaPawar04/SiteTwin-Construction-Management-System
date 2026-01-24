@@ -59,8 +59,15 @@ class UserModel extends HiveObject {
     };
   }
   
+  // Role helper methods (new backend roles)
   bool get isWorker => role == 'worker';
-  bool get isEngineer => role == 'engineer';
-  bool get isManager => role == 'manager';
+  bool get isSiteEngineer => role == 'site_engineer' || role == 'engineer'; // Legacy support
+  bool get isPurchaseManager => role == 'purchase_manager';
+  bool get isProjectManager => role == 'project_manager' || role == 'manager'; // Legacy support
+  bool get isSafetyOfficer => role == 'safety_officer';
   bool get isOwner => role == 'owner';
+  
+  // Legacy support
+  bool get isEngineer => isSiteEngineer;
+  bool get isManager => isProjectManager;
 }

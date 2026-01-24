@@ -60,6 +60,7 @@ class AppLocalizations {
   String get invoices => translate('invoices');
   String get projects => translate('projects');
   String get notifications => translate('notifications');
+  String get teamAttendance => translate('team_attendance');
 
   // Status
   String get pending => translate('pending');
@@ -99,6 +100,9 @@ const Map<String, String> _en = {
   'invoices': 'Invoices',
   'projects': 'Projects',
   'notifications': 'Notifications',
+  'team_attendance': 'Team Attendance',
+  'new_request': 'New Request',
+  'coming_soon': 'Coming Soon',
   'logout': 'Logout',
   'login': 'Login',
   'assign_task': 'Assign Task',
@@ -180,6 +184,9 @@ const Map<String, String> _hi = {
   'invoices': 'चालान',
   'projects': 'परियोजनाएं',
   'notifications': 'सूचनाएं',
+  'team_attendance': 'टीम उपस्थिति',
+  'new_request': 'नया अनुरोध',
+  'coming_soon': 'जल्द आ रहा है',
   'logout': 'लॉगआउट',
   'login': 'लॉगिन',
   'assign_task': 'कार्य असाइन करें',
@@ -258,9 +265,12 @@ const Map<String, String> _ta = {
   'dashboard': 'கட்டுப்பாட்டு பலகை',
   'profile': 'சுயவிவரம்',
   'settings': 'அமைப்புகள்',
-  'invoices': 'ஏலளை',
+  'invoices': 'விலைப்பட்டியல்கள்',
   'projects': 'திட்டங்கள்',
   'notifications': 'அறிவிப்புகள்',
+  'team_attendance': 'குழு வருகை',
+  'new_request': 'புதிய கோரிக்கை',
+  'coming_soon': 'விரைவில் வரும்',
   'logout': 'வெளியேறு',
   'login': 'உள்நுழைவு',
   'assign_task': 'பணியை ஒதுக்கவும்',
@@ -341,6 +351,9 @@ const Map<String, String> _mr = {
   'invoices': 'चलने',
   'projects': 'प्रकल्प',
   'notifications': 'सूचना',
+  'team_attendance': 'टीम उपस्थिती',
+  'new_request': 'नवीन विनंती',
+  'coming_soon': 'लवकरच येत आहे',
   'logout': 'लॉगआउट',
   'login': 'लॉगिन',
   'assign_task': 'कार्य असाइन करा',

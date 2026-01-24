@@ -6,13 +6,10 @@ import 'package:mobile/presentation/screens/attendance/attendance_screen.dart';
 import 'package:mobile/presentation/screens/tasks/task_screen.dart';
 import 'package:mobile/presentation/screens/tasks/task_assignment_screen.dart';
 import 'package:mobile/presentation/screens/dpr/dpr_list_screen.dart';
-import 'package:mobile/presentation/screens/dpr/dpr_create_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_list_screen.dart';
 import 'package:mobile/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:mobile/presentation/screens/projects/projects_screen.dart';
 import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dart';
-import 'package:mobile/presentation/screens/invoices/invoices_screen.dart';
-import 'package:mobile/presentation/screens/analytics/time_vs_cost_screen.dart';
 import 'package:mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:mobile/presentation/screens/settings/settings_screen.dart';
 import 'package:mobile/presentation/widgets/connection_indicator.dart';
@@ -32,23 +29,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   
   // Dynamic screens list based on user role
   List<Widget> _getScreensForRole(String role) {
-    if (role == 'worker' || role == 'engineer') {
+    // Worker: Dashboard, Attendance
+    if (role == 'worker') {
       return const [
         DashboardScreen(),
         AttendanceScreen(),
+      ];
+    } 
+    // Site Engineer: Dashboard, Attendance, Material Requests, Tasks
+    else if (role == 'engineer' || role == 'site_engineer') {
+      return const [
+        DashboardScreen(),
+        AttendanceScreen(),
+        MaterialRequestListScreen(),
+        TaskScreen(),
+      ];
+    }
+    // Purchase Manager: Dashboard, Material Requests, Stock
+    else if (role == 'purchase_manager') {
+      return const [
+        DashboardScreen(),
+        MaterialRequestListScreen(),
+        StockInventoryScreen(),
+      ];
+    }
+    // Project Manager: Dashboard, Tasks, DPR Review
+    else if (role == 'manager' || role == 'project_manager') {
+      return const [
+        DashboardScreen(),
         TaskScreen(),
         DprListScreen(),
       ];
-    } else if (role == 'manager') {
+    }
+    // Safety Officer: Dashboard, Attendance
+    else if (role == 'safety_officer') {
       return const [
         DashboardScreen(),
-        TaskScreen(),
+        AllUsersAttendanceScreen(),
       ];
-    } else {
-      // Owner - Dashboard and Tasks
+    }
+    // Owner: Dashboard only (uses drawer for all features)
+    else {
       return const [
         DashboardScreen(),
-        TaskScreen(),
       ];
     }
   }
@@ -84,29 +107,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
   
   String _getTitle(AppLocalizations loc, int index, String role) {
-    if (role == 'worker' || role == 'engineer') {
+    // Worker
+    if (role == 'worker') {
       switch (index) {
-        case 0:
-          return loc.dashboard;
-        case 1:
-          return loc.attendance;
-        case 2:
-          return loc.tasks;
-        case 3:
-          return loc.dailyProgress;
-        default:
-          return loc.dashboard;
+        case 0: return loc.dashboard;
+        case 1: return loc.attendance;
+        default: return loc.dashboard;
       }
-    } else if (role == 'manager' || role == 'owner') {
+    }
+    // Site Engineer
+    else if (role == 'engineer' || role == 'site_engineer') {
       switch (index) {
-        case 0:
-          return loc.dashboard;
-        case 1:
-          return loc.tasks;
-        default:
-          return loc.dashboard;
+        case 0: return loc.dashboard;
+        case 1: return loc.attendance;
+        case 2: return loc.materialRequests;
+        case 3: return loc.tasks;
+        default: return loc.dashboard;
       }
-    } else {
+    }
+    // Purchase Manager
+    else if (role == 'purchase_manager') {
+      switch (index) {
+        case 0: return loc.dashboard;
+        case 1: return loc.materialRequests;
+        case 2: return loc.translate('stock_inventory');
+        default: return loc.dashboard;
+      }
+    }
+    // Project Manager
+    else if (role == 'manager' || role == 'project_manager') {
+      switch (index) {
+        case 0: return loc.dashboard;
+        case 1: return loc.tasks;
+        case 2: return loc.dailyProgress;
+        default: return loc.dashboard;
+      }
+    }
+    // Safety Officer
+    else if (role == 'safety_officer') {
+      switch (index) {
+        case 0: return loc.dashboard;
+        case 1: return 'Team Attendance';
+        default: return loc.dashboard;
+      }
+    }
+    // Owner
+    else {
       return loc.dashboard;
     }
   }
@@ -180,38 +226,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
           
-          // Attendance - Workers & Engineers only
-          if (user.role == 'worker' || user.role == 'engineer')
+          // Attendance - Workers & Site Engineers only
+          if (user.role == 'worker' || user.role == 'engineer' || user.role == 'site_engineer')
             ListTile(
               leading: const Icon(Icons.access_time),
               title: Text(loc.attendance),
-              selected: _currentIndex == 1,
+              selected: _currentIndex == 1 && (user.role == 'worker' || user.role == 'engineer' || user.role == 'site_engineer'),
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _currentIndex = 1);
               },
             ),
           
-          // Tasks - Workers, Engineers, Managers, and Owners
-          if (user.role == 'worker' || user.role == 'engineer' || user.role == 'manager' || user.role == 'owner')
+          // Material Requests - Site Engineers create, Purchase Managers review
+          if (user.role == 'engineer' || user.role == 'site_engineer' || user.role == 'purchase_manager')
             ListTile(
-              leading: const Icon(Icons.task_alt),
-              title: Text(loc.tasks),
-              selected: _currentIndex == 2 || (user.role == 'manager' && _currentIndex == 1) || (user.role == 'owner' && _currentIndex == 1),
+              leading: const Icon(Icons.inventory_2),
+              title: Text(loc.materialRequests),
+              selected: (user.role == 'engineer' || user.role == 'site_engineer') && _currentIndex == 2 ||
+                        user.role == 'purchase_manager' && _currentIndex == 1,
               onTap: () {
                 Navigator.pop(context);
-                setState(() {
-                  if (user.role == 'worker' || user.role == 'engineer') {
-                    _currentIndex = 2; // Tasks is at index 2 for workers/engineers
-                  } else {
-                    _currentIndex = 1; // Tasks is at index 1 for manager/owner
-                  }
-                });
+                if (user.role == 'engineer' || user.role == 'site_engineer') {
+                  setState(() => _currentIndex = 2);
+                } else if (user.role == 'purchase_manager') {
+                  setState(() => _currentIndex = 1);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MaterialRequestListScreen(),
+                    ),
+                  );
+                }
               },
             ),
           
-          // Assign Task - Managers and Owners
-          if (user.role == 'manager' || user.role == 'owner')
+          // Tasks - Site Engineers, Project Managers
+          if (user.role == 'engineer' || user.role == 'site_engineer' || user.role == 'manager' || user.role == 'project_manager')
+            ListTile(
+              leading: const Icon(Icons.task_alt),
+              title: Text(loc.tasks),
+              selected: (user.role == 'engineer' || user.role == 'site_engineer') && _currentIndex == 3 ||
+                        (user.role == 'manager' || user.role == 'project_manager') && _currentIndex == 1,
+              onTap: () {
+                Navigator.pop(context);
+                if (user.role == 'engineer' || user.role == 'site_engineer') {
+                  setState(() => _currentIndex = 3);
+                } else if (user.role == 'manager' || user.role == 'project_manager') {
+                  setState(() => _currentIndex = 1);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TaskScreen(),
+                    ),
+                  );
+                }
+              },
+            ),
+          
+          // Assign Task - Project Managers only
+          if (user.role == 'manager' || user.role == 'project_manager')
             ListTile(
               leading: const Icon(Icons.assignment_turned_in),
               title: Text(loc.translate('assign_task')),
@@ -226,112 +302,86 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
           
-          // DPR - Workers & Engineers submit, Managers approve
-          if (user.role == 'worker' || user.role == 'engineer')
+          // DPR - Project Managers and Owners review only (no creation from app)
+          if (user.role == 'manager' || user.role == 'project_manager' || user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.description),
               title: Text(loc.dailyProgress),
-              selected: _currentIndex == 3,
+              selected: (user.role == 'manager' || user.role == 'project_manager') && _currentIndex == 2,
               onTap: () {
                 Navigator.pop(context);
-                setState(() => _currentIndex = 3);
-              },
-            ),
-          
-          if (user.role == 'manager' || user.role == 'owner')
-            ListTile(
-              leading: const Icon(Icons.description),
-              title: Text(loc.dailyProgress),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Scaffold(
-                      appBar: AppBar(
-                        title: Text(loc.dailyProgress),
+                if (user.role == 'manager' || user.role == 'project_manager') {
+                  setState(() => _currentIndex = 2);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(
+                          title: Text(loc.dailyProgress),
+                        ),
+                        body: const DprListScreen(),
                       ),
-                      body: const DprListScreen(),
                     ),
-                  ),
-                );
+                  );
+                }
               },
             ),
           
-          // Material Requests - Engineers create, Managers and Owners approve
-          if (user.role == 'engineer' || user.role == 'manager' || user.role == 'owner')
-            ListTile(
-              leading: const Icon(Icons.inventory_2),
-              title: Text(loc.materialRequests),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MaterialRequestListScreen(),
-                  ),
-                );
-              },
-            ),
-          
-          // Stock & Inventory - Managers and Owners
-          if (user.role == 'manager' || user.role == 'owner')
+          // Stock & Inventory - Purchase Managers, Project Managers, Owners
+          if (user.role == 'purchase_manager' || user.role == 'manager' || user.role == 'project_manager' || user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.warehouse),
               title: Text(loc.translate('stock_inventory')),
+              selected: user.role == 'purchase_manager' && _currentIndex == 2,
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const StockInventoryScreen(),
-                  ),
-                );
+                if (user.role == 'purchase_manager') {
+                  setState(() => _currentIndex = 2);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const StockInventoryScreen(),
+                    ),
+                  );
+                }
               },
             ),
           
-          // Invoices - Owner only
-          if (user.role == 'owner')
+          
+          // Team Attendance - Safety Officers, Owners
+          if (user.role == 'safety_officer' || user.role == 'owner')
             ListTile(
-              leading: const Icon(Icons.receipt_long),
-              title: Text(loc.invoices),
+              leading: const Icon(Icons.groups),
+              title: Text(loc.teamAttendance),
+              selected: user.role == 'safety_officer' && _currentIndex == 1,
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const InvoicesScreen(),
-                  ),
-                );
-              },
-            ),
-                    // Time vs Cost Analysis - Owner only
-          if (user.role == 'owner')
-            ListTile(
-              leading: const Icon(Icons.analytics),
-              title: Text(loc.translate('time_vs_cost')),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TimeVsCostScreen(),
-                  ),
-                );
+                if (user.role == 'safety_officer') {
+                  setState(() => _currentIndex = 1);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AllUsersAttendanceScreen(),
+                    ),
+                  );
+                }
               },
             ),
           
-          // Team Attendance - Owner only
+          // User Management - Owners only
           if (user.role == 'owner')
             ListTile(
-              leading: const Icon(Icons.group),
-              title: const Text('Team Attendance'),
+              leading: const Icon(Icons.people),
+              title: Text(loc.translate('user_management')),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const AllUsersAttendanceScreen(),
+                    builder: (context) => const UserManagementScreen(),
                   ),
                 );
               },
@@ -431,69 +481,142 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   
   Widget? _buildBottomNavigation(BuildContext context, dynamic user) {
     final loc = AppLocalizations.of(context);
-    // Worker and Engineer get four tabs (Dashboard, Attendance, Tasks, DPR)
-    if (user.role == 'worker' || user.role == 'engineer') {
+    
+    // Worker: Dashboard, Attendance
+    if (user.role == 'worker') {
       return BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
+            icon: const Icon(Icons.dashboard),
             label: loc.dashboard,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.access_time),
+            icon: const Icon(Icons.access_time),
             label: loc.attendance,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.task_alt),
-            label: loc.tasks,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.description),
-            label: loc.dpr,
           ),
         ],
       );
-    } else if (user.role == 'manager') {
-      // Manager gets two tabs (Dashboard, Tasks)
+    }
+    
+    // Site Engineer: Dashboard, Attendance, Material Requests, Tasks
+    else if (user.role == 'engineer' || user.role == 'site_engineer') {
       return BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
+            icon: const Icon(Icons.dashboard),
             label: loc.dashboard,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.task_alt),
+            icon: const Icon(Icons.access_time),
+            label: loc.attendance,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.inventory_2),
+            label: loc.materialRequests,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.task_alt),
             label: loc.tasks,
           ),
         ],
       );
     }
     
-    // Owner gets no bottom navigation - uses drawer only
+    // Purchase Manager: Dashboard, Material Requests, Stock
+    else if (user.role == 'purchase_manager') {
+      return BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.dashboard),
+            label: loc.dashboard,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.inventory_2),
+            label: loc.materialRequests,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.warehouse),
+            label: loc.translate('stock_inventory'),
+          ),
+        ],
+      );
+    }
+    
+    // Project Manager: Dashboard, Tasks, DPR
+    else if (user.role == 'manager' || user.role == 'project_manager') {
+      return BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.dashboard),
+            label: loc.dashboard,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.task_alt),
+            label: loc.tasks,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.description),
+            label: loc.dailyProgress,
+          ),
+        ],
+      );
+    }
+    
+    // Safety Officer: Dashboard, Team Attendance
+    else if (user.role == 'safety_officer') {
+      return BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.dashboard),
+            label: loc.dashboard,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.groups),
+            label: loc.teamAttendance,
+          ),
+        ],
+      );
+    }
+    
+    // Owner: No bottom navigation - uses drawer only
     return null;
   }
   
   Widget? _buildFloatingActionButton(BuildContext context, dynamic user) {
-    // Show "New DPR" button only for workers/engineers on DPR screen (index 3)
-    if ((user.role == 'worker' || user.role == 'engineer') && _currentIndex == 3) {
+    final loc = AppLocalizations.of(context);
+    
+    // Site Engineer on Material Requests screen (index 2): "New Request" button
+    if ((user.role == 'engineer' || user.role == 'site_engineer') && _currentIndex == 2) {
       return FloatingActionButton.extended(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const DprCreateScreen(),
+          // TODO: Phase 2 - Implement MaterialRequestCreateScreen
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(loc.translate('coming_soon')),
+              duration: const Duration(seconds: 2),
             ),
           );
         },
         icon: const Icon(Icons.add),
-        label: const Text('New DPR'),
+        label: Text(loc.translate('new_request')),
       );
     }
+    
     return null;
   }
 }

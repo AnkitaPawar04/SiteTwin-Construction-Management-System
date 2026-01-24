@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/data/models/material_request_model.dart';
 import 'package:mobile/providers/providers.dart';
-import 'package:intl/intl.dart';
 
 class MaterialRequestReceiveScreen extends ConsumerStatefulWidget {
   final MaterialRequestModel materialRequest;
