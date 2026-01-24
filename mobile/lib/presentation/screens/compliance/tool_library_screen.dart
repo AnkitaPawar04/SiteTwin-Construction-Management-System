@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/compliance_models.dart';
+import '../../../providers/providers.dart';
+import 'add_tool_dialog.dart';
+import 'tool_detail_dialog.dart';
+import 'qr_scanner_screen.dart';
 
-class ToolLibraryScreen extends StatefulWidget {
+class ToolLibraryScreen extends ConsumerStatefulWidget {
   const ToolLibraryScreen({super.key});
 
   @override
-  State<ToolLibraryScreen> createState() => _ToolLibraryScreenState();
+  ConsumerState<ToolLibraryScreen> createState() => _ToolLibraryScreenState();
 }
 
-class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
+class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen> {
   List<ToolLibraryModel> _tools = [];
   String _filterStatus = 'ALL'; // ALL, AVAILABLE, CHECKED_OUT, MAINTENANCE
   bool _isLoading = false;
@@ -28,13 +33,11 @@ class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
     });
 
     try {
-      // TODO: Replace with actual API call
-      // final data = await toolRepository.getTools();
-      
-      await Future.delayed(const Duration(milliseconds: 500));
+      final toolRepository = ref.read(toolRepositoryProvider);
+      final tools = await toolRepository.getAllTools();
       
       setState(() {
-        _tools = [];
+        _tools = tools;
         _isLoading = false;
       });
     } catch (e) {
@@ -126,6 +129,11 @@ class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
           
           Expanded(child: _buildBody()),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddToolDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Tool'),
       ),
     );
   }
@@ -223,8 +231,11 @@ class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      child: InkWell(
+        onTap: () => _showToolDetail(tool),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -252,7 +263,7 @@ class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        tool.toolCode,
+                        tool.toolCode ?? 'N/A',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 13,
@@ -314,7 +325,7 @@ class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
               ],
             ),
             
-            if (tool.isCheckedOut) ...[
+            if (tool.isCheckedOut && tool.assignedToUserName != null) ...[
               const SizedBox(height: 16),
               const Divider(height: 1),
               const SizedBox(height: 12),
@@ -332,7 +343,7 @@ class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
                         Icon(Icons.person, size: 16, color: Colors.blue[700]!),
                         const SizedBox(width: 6),
                         Text(
-                          'Assigned to: ${tool.assignedToUserName}',
+                          'Assigned to: ${tool.assignedToUserName!}',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -344,28 +355,29 @@ class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Checked Out',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade600,
+                        if (tool.checkOutTime != null)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Checked Out',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                DateFormat('dd MMM, hh:mm a').format(DateTime.parse(tool.checkOutTime!)),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(height: 2),
+                                Text(
+                                  DateFormat('dd MMM, hh:mm a').format(DateTime.parse(tool.checkOutTime!)),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
                         if (tool.expectedReturnTime != null)
                           Expanded(
                             child: Column(
@@ -439,29 +451,75 @@ class _ToolLibraryScreenState extends State<ToolLibraryScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
-  Future<void> _scanQRCode() async {
-    // TODO: Implement QR code scanner
-    showDialog(
+  Future<void> _showToolDetail(ToolLibraryModel tool) async {
+    final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('QR Scanner'),
-        content: const Text(
-          'QR code scanning will enable:\n\n'
-          '• Quick tool checkout\n'
-          '• Instant tool return\n'
-          '• Tool identification\n'
-          '• Automatic status updates',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      builder: (context) => ToolDetailDialog(tool: tool),
     );
+
+    if (result == true) {
+      _loadTools(); // Reload tools after action
+    }
+  }
+
+  Future<void> _showAddToolDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => const AddToolDialog(),
+    );
+
+    if (result == true) {
+      _loadTools(); // Reload tools after adding
+    }
+  }
+
+  Future<void> _scanQRCode() async {
+    try {
+      final scannedCode = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+      );
+
+      if (scannedCode != null && mounted) {
+        // Find tool by QR code or tool code
+        final matchFound = _tools.any((tool) => 
+          (tool.qrCode != null && tool.qrCode == scannedCode) || 
+          (tool.toolCode != null && tool.toolCode == scannedCode)
+        );
+
+        if (matchFound) {
+          final matchingTool = _tools.firstWhere(
+            (tool) => 
+              (tool.qrCode != null && tool.qrCode == scannedCode) || 
+              (tool.toolCode != null && tool.toolCode == scannedCode),
+          );
+          // Show tool detail
+          _showToolDetail(matchingTool);
+        } else {
+          // No matching tool found
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('No tool found with code: $scannedCode'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error scanning QR code: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

@@ -162,6 +162,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/daily-wagers/wage-summary', [DailyWagerController::class, 'getWageSummary']);
 
     // Tool Library routes
+    Route::get('/tools', [ToolController::class, 'index']);
+    Route::get('/tools/{id}', [ToolController::class, 'show']);
     Route::post('/tools', [ToolController::class, 'store']);
     Route::post('/tools/checkout', [ToolController::class, 'checkout']);
     Route::post('/tools/checkouts/{checkoutId}/return', [ToolController::class, 'return']);

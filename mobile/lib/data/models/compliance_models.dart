@@ -191,12 +191,13 @@ class FaceRecallAttendanceModel {
 class ToolLibraryModel {
   final int toolId;
   final String toolName;
-  final String toolCode;
-  final String qrCode;
+  final String? toolCode;
+  final String? qrCode;
   final String category;
   final String status; // 'AVAILABLE', 'CHECKED_OUT', 'MAINTENANCE'
   final int? assignedToUserId;
   final String? assignedToUserName;
+  final int? currentCheckoutId;
   final String? checkOutTime;
   final String? expectedReturnTime;
   final String? actualReturnTime;
@@ -207,12 +208,13 @@ class ToolLibraryModel {
   ToolLibraryModel({
     required this.toolId,
     required this.toolName,
-    required this.toolCode,
-    required this.qrCode,
+    this.toolCode,
+    this.qrCode,
     required this.category,
     required this.status,
     this.assignedToUserId,
     this.assignedToUserName,
+    this.currentCheckoutId,
     this.checkOutTime,
     this.expectedReturnTime,
     this.actualReturnTime,
@@ -234,20 +236,21 @@ class ToolLibraryModel {
 
   factory ToolLibraryModel.fromJson(Map<String, dynamic> json) {
     return ToolLibraryModel(
-      toolId: json['tool_id'] as int,
-      toolName: json['tool_name'] as String,
-      toolCode: json['tool_code'] as String,
-      qrCode: json['qr_code'] as String,
-      category: json['category'] as String,
-      status: json['status'] as String,
-      assignedToUserId: json['assigned_to_user_id'] as int?,
+      toolId: json['id'] ?? json['tool_id'] ?? 0,
+      toolName: json['tool_name'] as String? ?? 'Unknown Tool',
+      toolCode: json['tool_code'] as String?,
+      qrCode: json['qr_code'] as String?,
+      category: json['category'] as String? ?? 'General',
+      status: json['current_status'] ?? json['status'] ?? 'AVAILABLE',
+      assignedToUserId: json['current_holder_id'] ?? json['assigned_to_user_id'],
       assignedToUserName: json['assigned_to_user_name'] as String?,
+      currentCheckoutId: json['current_checkout_id'] as int?,
       checkOutTime: json['check_out_time'] as String?,
       expectedReturnTime: json['expected_return_time'] as String?,
       actualReturnTime: json['actual_return_time'] as String?,
-      condition: json['condition'] as String,
-      location: json['location'] as String,
-      updatedAt: json['updated_at'] as String,
+      condition: json['condition'] as String? ?? 'GOOD',
+      location: json['location'] as String? ?? 'Storage',
+      updatedAt: json['updated_at'] as String? ?? DateTime.now().toIso8601String(),
     );
   }
 

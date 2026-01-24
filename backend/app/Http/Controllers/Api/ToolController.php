@@ -17,6 +17,41 @@ class ToolController extends Controller
     }
 
     /**
+     * Get all tools
+     */
+    public function index(Request $request)
+    {
+        try {
+            $status = $request->query('status');
+            $tools = $this->toolService->getAllTools($status);
+
+            return response()->json([
+                'success' => true,
+                'data' => $tools,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get single tool
+     */
+    public function show($id)
+    {
+        try {
+            $tool = $this->toolService->getToolById($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $tool,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+        }
+    }
+
+    /**
      * Add new tool
      */
     public function store(Request $request)

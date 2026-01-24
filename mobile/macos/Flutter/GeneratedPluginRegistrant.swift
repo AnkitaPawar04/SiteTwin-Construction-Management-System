@@ -14,6 +14,7 @@ import firebase_messaging
 import flutter_image_compress_macos
 import flutter_secure_storage_darwin
 import geolocator_apple
+import mobile_scanner
 import package_info_plus
 import shared_preferences_foundation
 import sqflite_darwin
@@ -30,6 +31,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FlutterImageCompressMacosPlugin.register(with: registry.registrar(forPlugin: "FlutterImageCompressMacosPlugin"))
   FlutterSecureStorageDarwinPlugin.register(with: registry.registrar(forPlugin: "FlutterSecureStorageDarwinPlugin"))
   GeolocatorPlugin.register(with: registry.registrar(forPlugin: "GeolocatorPlugin"))
+  MobileScannerPlugin.register(with: registry.registrar(forPlugin: "MobileScannerPlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
   SqflitePlugin.register(with: registry.registrar(forPlugin: "SqflitePlugin"))

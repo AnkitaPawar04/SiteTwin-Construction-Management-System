@@ -10,9 +10,46 @@ use Illuminate\Support\Str;
 class ToolService
 {
     /**
+     * Get all tools
+     */
+    public function getAllTools(?string $status = null): array
+    {
+        $query = Tool::with(['currentHolder', 'currentProject', 'activeCheckout']);
+
+        if ($status) {
+            $query->where('current_status', $status);
+        }
+
+        $tools = $query->orderBy('tool_name')->get();
+        
+        // Add current_checkout_id and assigned_to_user_name to each tool
+        return $tools->map(function ($tool) {
+            $toolArray = $tool->toArray();
+            $toolArray['current_checkout_id'] = $tool->activeCheckout ? $tool->activeCheckout->id : null;
+            $toolArray['assigned_to_user_name'] = $tool->currentHolder ? $tool->currentHolder->name : null;
+            return $toolArray;
+        })->toArray();
+    }
+
+    /**
+     * Get tool by ID
+     */
+    public function getToolById(int $id): array
+    {
+        $tool = Tool::with(['currentHolder', 'currentProject', 'checkouts', 'activeCheckout'])
+            ->findOrFail($id);
+        
+        $toolArray = $tool->toArray();
+        $toolArray['current_checkout_id'] = $tool->activeCheckout ? $tool->activeCheckout->id : null;
+        $toolArray['assigned_to_user_name'] = $tool->currentHolder ? $tool->currentHolder->name : null;
+        
+        return $toolArray;
+    }
+
+    /**
      * Add new tool to library
      */
-    public function addTool(array $data): Tool
+    public function addTool(array $data): array
     {
         $tool = Tool::create([
             'tool_name' => $data['tool_name'],
@@ -26,7 +63,10 @@ class ToolService
             'current_status' => 'AVAILABLE',
         ]);
 
-        return $tool;
+        $toolArray = $tool->toArray();
+        $toolArray['current_checkout_id'] = null;
+        
+        return $toolArray;
     }
 
     /**

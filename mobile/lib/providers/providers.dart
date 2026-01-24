@@ -22,6 +22,7 @@ import 'package:mobile/data/repositories/notification_repository.dart';
 import 'package:mobile/data/repositories/dashboard_repository.dart';
 import 'package:mobile/data/repositories/offline_sync_repository.dart';
 import 'package:mobile/data/repositories/purchase_order_repository.dart';
+import 'package:mobile/data/repositories/tool_repository.dart';
 import 'package:mobile/data/services/sync_queue_service.dart';
 
 // Core Providers
@@ -133,4 +134,8 @@ final offlineSyncRepositoryProvider = Provider<OfflineSyncRepository>((ref) {
 
 final purchaseOrderRepositoryProvider = Provider<PurchaseOrderRepository>((ref) {
   return PurchaseOrderRepository(ref.watch(apiClientProvider));
+});
+
+final toolRepositoryProvider = Provider<ToolRepository>((ref) {
+  return ToolRepository(ref.watch(apiClientProvider));
 });
