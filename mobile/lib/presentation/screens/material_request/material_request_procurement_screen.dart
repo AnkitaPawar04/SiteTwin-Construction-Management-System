@@ -4,6 +4,7 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/core/constants/app_constants.dart';
 import 'package:mobile/data/models/material_request_model.dart';
 import 'package:mobile/providers/providers.dart';
+import 'package:mobile/presentation/screens/purchase_order/purchase_order_create_screen.dart';
 
 /// Purchase Manager screen for reviewing material requests
 /// and deciding procurement strategy (Fulfill from Stock vs Create PO)
@@ -121,14 +122,20 @@ class _MaterialRequestProcurementScreenState
   }
 
   Future<void> _createPurchaseOrder() async {
-    // Phase 3 will implement PO creation
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Purchase Order creation will be available in Phase 3'),
-        backgroundColor: Colors.blue,
-        duration: Duration(seconds: 3),
+    // Navigate to PO creation screen
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PurchaseOrderCreateScreen(
+          materialRequest: widget.materialRequest,
+        ),
       ),
     );
+    
+    if (result == true && mounted) {
+      // PO created successfully, go back to list
+      Navigator.pop(context, true);
+    }
   }
 
   Future<void> _rejectRequest() async {
