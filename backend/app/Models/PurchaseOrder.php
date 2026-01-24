@@ -32,6 +32,7 @@ class PurchaseOrder extends Model
         'grand_total',
         'invoice_file',
         'invoice_type',
+        'invoice_number',
         'approved_at',
         'delivered_at',
         'closed_at',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
 use App\Models\MaterialRequest;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -204,6 +205,8 @@ class PurchaseOrderController extends Controller
         ]);
 
         try {
+            DB::beginTransaction();
+
             $purchaseOrder = PurchaseOrder::findOrFail($id);
             
             $purchaseOrder->status = $validated['status'];
@@ -211,6 +214,26 @@ class PurchaseOrderController extends Controller
             // Set timestamps based on status
             if ($validated['status'] === PurchaseOrder::STATUS_APPROVED) {
                 $purchaseOrder->approved_at = now();
+
+                // PHASE 3: Create stock IN if invoice is already uploaded
+                if ($purchaseOrder->invoice_file && $purchaseOrder->invoice_number) {
+                    $stockService = new StockService();
+                    $stockTransactions = $stockService->createStockInFromPurchaseOrder(
+                        $purchaseOrder,
+                        $purchaseOrder->invoice_number,
+                        auth()->id()
+                    );
+
+                    $purchaseOrder->save();
+                    DB::commit();
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Purchase Order approved and stock IN transactions created successfully',
+                        'data' => $purchaseOrder,
+                        'stock_transactions' => count($stockTransactions)
+                    ]);
+                }
             } elseif ($validated['status'] === PurchaseOrder::STATUS_DELIVERED) {
                 $purchaseOrder->delivered_at = now();
             } elseif ($validated['status'] === PurchaseOrder::STATUS_CLOSED) {
@@ -218,6 +241,7 @@ class PurchaseOrderController extends Controller
             }
             
             $purchaseOrder->save();
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -226,6 +250,7 @@ class PurchaseOrderController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update status: ' . $e->getMessage()
@@ -244,9 +269,12 @@ class PurchaseOrderController extends Controller
         $validated = $request->validate([
             'invoice' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB max
             'invoice_type' => 'required|in:gst,non_gst',
+            'invoice_number' => 'required|string|max:100', // PHASE 3: Invoice number for stock tracking
         ]);
 
         try {
+            DB::beginTransaction();
+
             // PHASE 2: Validate invoice type matches PO type
             if ($validated['invoice_type'] !== $purchaseOrder->type) {
                 return response()->json([
@@ -265,15 +293,38 @@ class PurchaseOrderController extends Controller
             
             $purchaseOrder->invoice_file = $path;
             $purchaseOrder->invoice_type = $validated['invoice_type'];
+            $purchaseOrder->invoice_number = $validated['invoice_number'];
             $purchaseOrder->save();
+
+            // PHASE 3: Create stock IN transactions if PO is approved
+            if ($purchaseOrder->status === PurchaseOrder::STATUS_APPROVED) {
+                $stockService = new StockService();
+                $stockTransactions = $stockService->createStockInFromPurchaseOrder(
+                    $purchaseOrder,
+                    $validated['invoice_number'],
+                    auth()->id()
+                );
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Invoice uploaded and stock IN transactions created successfully',
+                    'data' => $purchaseOrder,
+                    'stock_transactions' => count($stockTransactions)
+                ]);
+            }
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Invoice uploaded and validated successfully',
+                'message' => 'Invoice uploaded successfully. Stock will be added when PO is approved.',
                 'data' => $purchaseOrder
             ]);
 
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to upload invoice: ' . $e->getMessage()

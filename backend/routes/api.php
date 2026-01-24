@@ -88,6 +88,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stock/project/{projectId}/transactions', [StockController::class, 'transactions']);
     Route::post('/stock/add', [StockController::class, 'addStock']);
     Route::post('/stock/remove', [StockController::class, 'removeStock']);
+    
+    // PHASE 3: Stock reporting endpoints
+    Route::get('/stock/project/{projectId}/report', [StockController::class, 'getProjectStock']);
+    Route::get('/stock/movements', [StockController::class, 'getStockMovements']);
+    Route::get('/stock/summary', [StockController::class, 'getStockSummary']);
+    Route::post('/stock/out', [StockController::class, 'createStockOut']);
 
     // Invoice routes
     Route::get('/invoices', [InvoiceController::class, 'all']);

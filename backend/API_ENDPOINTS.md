@@ -120,19 +120,28 @@ http://localhost:8000/api
 > - **Auto-Detection**: PO type automatically determined from materials
 > - **Invoice Validation**: GST invoices required for GST POs, Non-GST for Non-GST POs
 
+> **📦 PHASE 3 ENHANCEMENT**:  
+> - **Stock IN Automation**: Approving a PO with uploaded invoice auto-creates stock transactions
+> - **Invoice Number Required**: Must provide `invoice_number` when uploading invoice for stock traceability
+
 | Method | Endpoint | Description | Auth Required | Roles |
 |--------|----------|-------------|---------------|-------|
 | GET | `/purchase-orders` | List purchase orders | ✅ | Purchase Manager, Manager, Owner |
 | POST | `/purchase-orders` | Create purchase order | ✅ | Purchase Manager |
 | GET | `/purchase-orders/{id}` | Get PO details | ✅ | Purchase Manager, Manager, Owner |
-| PATCH | `/purchase-orders/{id}/status` | Update PO status | ✅ | Purchase Manager, Manager |
-| POST | `/purchase-orders/{id}/invoice` | Upload vendor invoice | ✅ | Purchase Manager |
+| PATCH | `/purchase-orders/{id}/status` | Update PO status (creates stock if approved + invoice exists) | ✅ | Purchase Manager, Manager |
+| POST | `/purchase-orders/{id}/invoice` | Upload vendor invoice (creates stock if PO already approved) | ✅ | Purchase Manager |
 | DELETE | `/purchase-orders/{id}` | Delete PO (created only) | ✅ | Purchase Manager |
 
 **PO Creation Rules:**
 - `type` field removed - auto-detected from materials
 - All materials in PO must have same `gst_type`
 - GST percentage auto-applied from material master
+
+**Invoice Upload Requirements (Phase 3):**
+- `invoice` (file): PDF, JPG, JPEG, or PNG (max 5MB)
+- `invoice_type`: 'gst' or 'non_gst' (must match PO type)
+- `invoice_number`: Vendor invoice number (required for stock traceability)
 - Invoice upload requires matching `invoice_type` (gst/non_gst)
 
 ---
@@ -145,6 +154,17 @@ http://localhost:8000/api
 | GET | `/stock/project/{projectId}/transactions` | Get stock transactions | ✅ | Manager, Engineer, Owner |
 | POST | `/stock/add` | Add stock | ✅ | Manager, Owner |
 | POST | `/stock/remove` | Remove stock | ✅ | Manager, Owner |
+
+### PHASE 3: Stock Reporting & Management
+
+| Method | Endpoint | Description | Auth Required | Roles |
+|--------|----------|-------------|---------------|-------|
+| GET | `/stock/project/{projectId}/report` | Get stock report with GST segregation | ✅ | Manager, Engineer, Purchase Manager, Owner |
+| GET | `/stock/movements` | Get stock movements (query: material_id, project_id, limit) | ✅ | Manager, Engineer, Purchase Manager, Owner |
+| GET | `/stock/summary` | Get stock summary across all projects | ✅ | Manager, Purchase Manager, Owner |
+| POST | `/stock/out` | Create stock OUT transaction | ✅ | Manager, Engineer |
+
+> **📦 PHASE 3 NOTE**: Stock IN transactions are automatically created when a Purchase Order is APPROVED and has an uploaded invoice. Use `/stock/out` for task/site consumption.
 
 ---
 
@@ -288,7 +308,7 @@ Configure in `config/cors.php` for mobile app integration:
 
 ---
 
-## Total Endpoints: 68
+## Total Endpoints: 72
 
 - Authentication: 3
 - Projects: 7
@@ -297,9 +317,9 @@ Configure in `config/cors.php` for mobile app integration:
 - DPR: 5
 - Materials: 4
 - Material Requests: 6 (updated with review)
-- Vendors: 5 (new)
-- Purchase Orders: 6 (new)
-- Stock: 4
+- Vendors: 5 (new in Phase 1)
+- Purchase Orders: 6 (new in Phase 1)
+- Stock: 8 (4 legacy + 4 new in Phase 3)
 - Invoices: 3 (deprecated, legacy support)
 - Dashboard: 1
 - Notifications: 4
@@ -308,4 +328,41 @@ Configure in `config/cors.php` for mobile app integration:
 
 ---
 
+## Phase Implementation Summary
+
+### Phase 1 ✅ (Purchase Manager & PO Foundation)
+- Added Purchase Manager role
+- Created Vendor management (5 endpoints)
+- Created Purchase Order system (6 endpoints)
+- Updated Material Request flow (review step)
+
+### Phase 2 ✅ (GST Compliance)
+- Added GST classification to materials
+- Enforced GST/Non-GST separation in POs
+- Added invoice type validation
+- Updated material seeder with 43 GST-classified materials
+
+### Phase 3 ✅ (Stock & Inventory Integration)
+- Created stock_transactions table
+- Auto-stock IN when PO approved + invoice uploaded
+- Manual stock OUT for task/site consumption
+- Stock reports with GST segregation (4 new endpoints)
+- Negative stock prevention
+
+### Phase 4 🔜 (Planned: Costing & Variance Analytics)
+- Project cost dashboards from PO data
+- Theoretical vs actual consumption variance
+- Flat/unit costing calculations
+- Wastage alerts
+
+### Phase 5 🔜 (Planned: Advanced Features)
+- Contractor rating system
+- Face recall for daily wagers
+- Tool library with QR codes
+- OTP permit-to-work
+- Petty cash wallet with GPS validation
+
+---
+
 For detailed request/response examples, see `API_DOCUMENTATION.md`
+For Phase 3 implementation details, see `PHASE_3_IMPLEMENTATION.md`

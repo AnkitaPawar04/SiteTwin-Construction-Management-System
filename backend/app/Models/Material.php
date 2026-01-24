@@ -53,4 +53,40 @@ class Material extends Model
     {
         return $this->hasMany(StockTransaction::class);
     }
+
+    /**
+     * Get current stock balance for a specific project.
+     */
+    public function getCurrentStock($projectId)
+    {
+        return $this->stockTransactions()
+            ->where('project_id', $projectId)
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->value('balance_after_transaction') ?? 0;
+    }
+
+    /**
+     * Get total stock across all projects.
+     */
+    public function getTotalStock()
+    {
+        $projects = Project::all();
+        $totalStock = 0;
+
+        foreach ($projects as $project) {
+            $totalStock += $this->getCurrentStock($project->id);
+        }
+
+        return $totalStock;
+    }
+
+    /**
+     * Check if there's sufficient stock for a given project.
+     */
+    public function hasSufficientStock($projectId, $requiredQuantity)
+    {
+        $currentStock = $this->getCurrentStock($projectId);
+        return $currentStock >= $requiredQuantity;
+    }
 }
