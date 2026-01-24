@@ -234,14 +234,36 @@ class MaterialModel {
     required this.description,
   });
 
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      // Handle decimal strings like "10.00"
+      final doubleVal = double.tryParse(value);
+      return doubleVal?.toInt() ?? 0;
+    }
+    return 0;
+  }
+
   factory MaterialModel.fromJson(Map<String, dynamic> json) {
     return MaterialModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      name: json['name'] as String,
-      unit: json['unit'] as String,
-      unitPrice: json['unit_price'] is double ? json['unit_price'] : double.tryParse(json['unit_price']?.toString() ?? '0') ?? 0.0,
-      gstRate: json['gst_rate'] is double ? json['gst_rate'] : double.tryParse(json['gst_rate']?.toString() ?? '0') ?? 0.0,
-      description: json['description'] as String? ?? '',
+      id: _parseInt(json['id']),
+      name: json['name']?.toString() ?? '',
+      unit: json['unit']?.toString() ?? '',
+      unitPrice: _parseDouble(json['unit_price']),
+      gstRate: _parseDouble(json['gst_rate'] ?? json['gst_percentage']),
+      description: json['description']?.toString() ?? '',
     );
   }
 

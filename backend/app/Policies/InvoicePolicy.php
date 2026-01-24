@@ -9,20 +9,20 @@ class InvoicePolicy
 {
     /**
      * Determine if the user can view any invoices.
-     * Only Owners can view invoices.
+     * Owners and Purchase Managers can view invoices.
      */
     public function viewAny(User $user)
     {
-        return $user->isOwner();
+        return $user->isOwner() || $user->isPurchaseManager();
     }
 
     /**
      * Determine if the user can view the invoice.
-     * Only Owners can view invoices.
+     * Owners and Purchase Managers can view invoices.
      */
     public function view(User $user, Invoice $invoice)
     {
-        return $user->isOwner();
+        return $user->isOwner() || $user->isPurchaseManager();
     }
 
     /**

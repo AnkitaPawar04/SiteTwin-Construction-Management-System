@@ -14,6 +14,7 @@ import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dar
 import 'package:mobile/presentation/screens/stock/stock_in_screen.dart';
 import 'package:mobile/presentation/screens/stock/stock_out_screen.dart';
 import 'package:mobile/presentation/screens/purchase_order/purchase_order_list_screen.dart';
+import 'package:mobile/presentation/screens/invoice/invoice_list_screen.dart';
 import 'package:mobile/presentation/screens/analytics/cost_dashboard_screen.dart';
 import 'package:mobile/presentation/screens/analytics/consumption_variance_screen.dart';
 import 'package:mobile/presentation/screens/analytics/unit_costing_screen.dart';
@@ -404,6 +405,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const PurchaseOrderListScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Invoices - Purchase Managers, Owners
+          if (user.role == 'purchase_manager' || user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.description),
+              title: const Text('Invoices'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InvoiceListScreen(),
                   ),
                 );
               },

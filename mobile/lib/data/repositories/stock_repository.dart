@@ -11,7 +11,18 @@ class StockRepository {
     final response = await _apiClient.get('/stock');
     final body = response.data;
     final list = body is List ? body : (body['data'] as List? ?? const []);
-    return list.map((json) => StockModel.fromJson(json as Map<String, dynamic>)).toList();
+    
+    final stocks = <StockModel>[];
+    for (var json in list) {
+      try {
+        stocks.add(StockModel.fromJson(json as Map<String, dynamic>));
+      } catch (e) {
+        print('Error parsing stock item: $e');
+        print('JSON: $json');
+        // Skip items that fail to parse
+      }
+    }
+    return stocks;
   }
 
   Future<List<StockTransactionModel>> getAllTransactions() async {

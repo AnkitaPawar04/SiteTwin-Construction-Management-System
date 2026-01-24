@@ -54,6 +54,12 @@ class PurchaseOrderModel extends HiveObject {
   
   @HiveField(16)
   final String? localId;
+  
+  @HiveField(17)
+  final String? invoiceNumber;
+  
+  @HiveField(18)
+  final String? invoiceType;
 
   PurchaseOrderModel({
     required this.id,
@@ -73,6 +79,8 @@ class PurchaseOrderModel extends HiveObject {
     required this.updatedAt,
     this.isSynced = true,
     this.localId,
+    this.invoiceNumber,
+    this.invoiceType,
   });
 
   factory PurchaseOrderModel.fromJson(Map<String, dynamic> json) {
@@ -98,6 +106,8 @@ class PurchaseOrderModel extends HiveObject {
       deliveryDate: json['delivered_at']?.toString(),
       createdAt: json['created_at']?.toString() ?? '',
       updatedAt: json['updated_at']?.toString() ?? '',
+      invoiceNumber: json['invoice_number']?.toString(),
+      invoiceType: json['invoice_type']?.toString(),
       isSynced: json['is_synced'] as bool? ?? true,
       localId: json['local_id']?.toString(),
     );

@@ -5,6 +5,7 @@ import 'package:mobile/core/constants/app_constants.dart';
 import 'package:mobile/data/models/purchase_order_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
 
 /// Purchase Order Detail Screen
 /// Shows PO details and allows status updates (approve, deliver, close)
@@ -54,12 +55,88 @@ class _PurchaseOrderDetailScreenState
     }
   }
 
+  Future<void> _uploadInvoice() async {
+    // Pick file
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    if (file.path == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid file selected')),
+      );
+      return;
+    }
+
+    // Show dialog to get invoice type and number
+    final invoiceData = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => _InvoiceUploadDialog(
+        gstType: _purchaseOrder?.gstType ?? 'gst',
+      ),
+    );
+
+    if (invoiceData == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final repository = ref.read(purchaseOrderRepositoryProvider);
+      await repository.uploadInvoice(
+        id: widget.purchaseOrderId,
+        invoicePath: file.path!,
+        invoiceType: invoiceData['type']!,
+        invoiceNumber: invoiceData['number']!,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invoice uploaded successfully! You can now approve the PO.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        _loadPurchaseOrder(); // Reload
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload invoice: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _updateStatus(String newStatus) async {
+    // Check if trying to approve without invoice
+    if (newStatus.toLowerCase() == 'approved' && 
+        (_purchaseOrder?.invoiceUrl == null || _purchaseOrder!.invoiceUrl!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please upload invoice before approving PO'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Update Status to $newStatus?'),
-        content: Text('Are you sure you want to mark this PO as $newStatus?'),
+        content: Text(
+          newStatus.toLowerCase() == 'approved'
+              ? 'Approving this PO will automatically add stock to inventory. Continue?'
+              : 'Are you sure you want to mark this PO as $newStatus?'
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -85,8 +162,13 @@ class _PurchaseOrderDetailScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('PO status updated to $newStatus'),
+            content: Text(
+              newStatus.toLowerCase() == 'approved'
+                  ? 'PO approved! Stock added to inventory.'
+                  : 'PO status updated to $newStatus'
+            ),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
         _loadPurchaseOrder(); // Reload
@@ -100,6 +182,49 @@ class _PurchaseOrderDetailScreenState
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _viewInvoice(String invoiceUrl) {
+    // Construct full URL for the invoice
+    final baseUrl = 'http://172.16.23.211:8000'; // TODO: Get from settings
+    final fullUrl = '$baseUrl/storage/$invoiceUrl';
+    
+    // Open in browser or show dialog with options
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Invoice'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.receipt, size: 64, color: Colors.blue),
+            const SizedBox(height: 16),
+            const Text('Invoice file is available'),
+            const SizedBox(height: 8),
+            Text(
+              'Path: $invoiceUrl',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: Implement actual viewing/downloading
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Invoice URL: $fullUrl')),
+              );
+              Navigator.pop(context);
+            },
+            child: const Text('Open'),
+          ),
+        ],
+      ),
+    );
   }
 
   Color _getStatusColor() {
@@ -212,6 +337,55 @@ class _PurchaseOrderDetailScreenState
               ),
 
               const SizedBox(height: 16),
+
+              // Invoice Card (if uploaded)
+              if (po.invoiceUrl != null && po.invoiceUrl!.isNotEmpty)
+                Card(
+                  color: Colors.blue[50],
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.receipt, color: Colors.blue[700]),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Invoice Details',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        if (po.invoiceNumber != null && po.invoiceNumber!.isNotEmpty)
+                          _buildInfoRow('Invoice Number', po.invoiceNumber!),
+                        if (po.invoiceType != null && po.invoiceType!.isNotEmpty)
+                          _buildInfoRow('Invoice Type', po.invoiceType!.toUpperCase()),
+                        _buildInfoRow('Status', 'Uploaded'),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _viewInvoice(po.invoiceUrl!),
+                            icon: const Icon(Icons.visibility),
+                            label: const Text('View Invoice'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue[700],
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              if (po.invoiceUrl != null && po.invoiceUrl!.isNotEmpty)
+                const SizedBox(height: 16),
 
               // Items Card
               Card(
@@ -411,34 +585,56 @@ class _PurchaseOrderDetailScreenState
     if (_purchaseOrder == null) return null;
 
     final status = _purchaseOrder!.status.toUpperCase();
+    final hasInvoice = _purchaseOrder!.invoiceUrl != null && _purchaseOrder!.invoiceUrl!.isNotEmpty;
 
-    // Purchase Manager can approve CREATED POs
+    // Purchase Manager can approve CREATED POs (after uploading invoice)
     if (status == 'CREATED') {
-      return FloatingActionButton.extended(
-        onPressed: () => _updateStatus(AppConstants.poApproved),
-        icon: const Icon(Icons.check_circle),
-        label: const Text('Approve PO'),
-        backgroundColor: Colors.blue,
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Upload Invoice Button
+            FloatingActionButton.extended(
+              onPressed: _isLoading ? null : _uploadInvoice,
+              icon: const Icon(Icons.upload_file),
+              label: Text(hasInvoice ? 'Re-upload Invoice' : 'Upload Invoice'),
+              backgroundColor: _isLoading ? Colors.grey : Colors.orange,
+              heroTag: 'upload',
+            ),
+            const SizedBox(height: 12),
+            // Approve Button
+            FloatingActionButton.extended(
+              onPressed: _isLoading ? null : () => _updateStatus(AppConstants.poApproved),
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Approve PO'),
+              backgroundColor: _isLoading ? Colors.grey : (hasInvoice ? Colors.blue : Colors.grey),
+              heroTag: 'approve',
+            ),
+          ],
+        ),
       );
     }
 
     // Manager can mark APPROVED POs as delivered
     if (status == 'APPROVED') {
       return FloatingActionButton.extended(
-        onPressed: () => _updateStatus(AppConstants.poDelivered),
+        onPressed: _isLoading ? null : () => _updateStatus(AppConstants.poDelivered),
         icon: const Icon(Icons.local_shipping),
         label: const Text('Mark Delivered'),
-        backgroundColor: Colors.green,
+        backgroundColor: _isLoading ? Colors.grey : Colors.green,
       );
     }
 
     // Manager can close DELIVERED POs
     if (status == 'DELIVERED') {
       return FloatingActionButton.extended(
-        onPressed: () => _updateStatus(AppConstants.poClosed),
+        onPressed: _isLoading ? null : () => _updateStatus(AppConstants.poClosed),
         icon: const Icon(Icons.done_all),
         label: const Text('Close PO'),
-        backgroundColor: Colors.grey[700],
+        backgroundColor: _isLoading ? Colors.grey : Colors.grey[700],
       );
     }
 
@@ -507,5 +703,103 @@ class _PurchaseOrderDetailScreenState
     } catch (_) {
       return dateString;
     }
+  }
+}
+
+/// Dialog for entering invoice details
+class _InvoiceUploadDialog extends StatefulWidget {
+  final String gstType;
+
+  const _InvoiceUploadDialog({required this.gstType});
+
+  @override
+  State<_InvoiceUploadDialog> createState() => _InvoiceUploadDialogState();
+}
+
+class _InvoiceUploadDialogState extends State<_InvoiceUploadDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _invoiceNumberController = TextEditingController();
+  late String _selectedType;
+
+  @override
+  void initState() {
+    super.initState();
+    // Normalize to lowercase to match dropdown items
+    _selectedType = widget.gstType.toLowerCase();
+  }
+
+  @override
+  void dispose() {
+    _invoiceNumberController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Invoice Details'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _invoiceNumberController,
+              decoration: const InputDecoration(
+                labelText: 'Invoice Number',
+                hintText: 'e.g., INV-2026-001',
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Invoice number is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedType,
+              decoration: const InputDecoration(
+                labelText: 'Invoice Type',
+              ),
+              items: const [
+                DropdownMenuItem(value: 'gst', child: Text('GST Invoice')),
+                DropdownMenuItem(value: 'non_gst', child: Text('Non-GST Invoice')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedType = value);
+                }
+              },
+            ),
+            if (_selectedType != widget.gstType)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Warning: PO type is ${widget.gstType.toUpperCase()}, but you selected $_selectedType',
+                  style: const TextStyle(color: Colors.orange, fontSize: 12),
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.pop(context, {
+                'number': _invoiceNumberController.text.trim(),
+                'type': _selectedType,
+              });
+            }
+          },
+          child: const Text('Upload'),
+        ),
+      ],
+    );
   }
 }

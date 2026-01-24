@@ -53,6 +53,7 @@ dependencies:
   # Image Handling
   image_picker: ^1.0.7
   flutter_image_compress: ^2.1.0
+  file_picker: ^8.0.0+1
   
   # UI
   cupertino_icons: ^1.0.8
