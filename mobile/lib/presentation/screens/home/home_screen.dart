@@ -17,6 +17,11 @@ import 'package:mobile/presentation/screens/purchase_order/purchase_order_list_s
 import 'package:mobile/presentation/screens/analytics/cost_dashboard_screen.dart';
 import 'package:mobile/presentation/screens/analytics/consumption_variance_screen.dart';
 import 'package:mobile/presentation/screens/analytics/unit_costing_screen.dart';
+import 'package:mobile/presentation/screens/compliance/contractor_rating_screen.dart';
+import 'package:mobile/presentation/screens/compliance/face_recall_attendance_screen.dart';
+import 'package:mobile/presentation/screens/compliance/tool_library_screen.dart';
+import 'package:mobile/presentation/screens/compliance/otp_permit_screen.dart';
+import 'package:mobile/presentation/screens/compliance/petty_cash_wallet_screen.dart';
 import 'package:mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:mobile/presentation/screens/settings/settings_screen.dart';
 import 'package:mobile/presentation/widgets/connection_indicator.dart';
@@ -467,6 +472,101 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 );
               },
             ),
+          
+          const Divider(),
+          
+          // Compliance & Field Features Section - Role-based access
+          if (user.role == 'owner' || user.role == 'manager' || user.role == 'project_manager' || user.role == 'purchase_manager')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Compliance & Field',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+          
+          // Contractor Rating - Owner, Project Manager, Purchase Manager
+          if (user.role == 'owner' || user.role == 'manager' || user.role == 'project_manager' || user.role == 'purchase_manager')
+            ListTile(
+              leading: const Icon(Icons.star_rate),
+              title: const Text('Contractor Rating'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ContractorRatingScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Face Recall Attendance - Safety Officer, Project Manager, Owner
+          if (user.role == 'safety_officer' || user.role == 'manager' || user.role == 'project_manager' || user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.face_retouching_natural),
+              title: const Text('Face Recall Attendance'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FaceRecallAttendanceScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Tool Library - Site Engineer, Purchase Manager, Project Manager, Owner
+          if (user.role == 'engineer' || user.role == 'site_engineer' || user.role == 'purchase_manager' || user.role == 'manager' || user.role == 'project_manager' || user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.build_circle),
+              title: const Text('Tool Library'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ToolLibraryScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // OTP Permit-to-Work - Worker, Site Engineer, Safety Officer, Project Manager, Owner
+          if (user.role == 'worker' || user.role == 'engineer' || user.role == 'site_engineer' || user.role == 'safety_officer' || user.role == 'manager' || user.role == 'project_manager' || user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.verified_user),
+              title: const Text('OTP Permit-to-Work'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OTPPermitScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Petty Cash Wallet - All roles
+          ListTile(
+            leading: const Icon(Icons.account_balance_wallet),
+            title: const Text('Petty Cash Wallet'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PettyCashWalletScreen(),
+                ),
+              );
+            },
+          ),
           
           const Divider(),
           
