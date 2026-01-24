@@ -254,7 +254,7 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Updated: ${_formatDate(item.updatedAt)}',
+                                  'Updated: ${_formatDate(item.updatedAt ?? '')}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[600],
@@ -551,7 +551,7 @@ class _StockInventoryScreenState extends ConsumerState<StockInventoryScreen>
                                               borderRadius: BorderRadius.circular(4),
                                             ),
                                             child: Text(
-                                              item.gstType,
+                                              item.gstType ?? 'N/A',
                                               style: TextStyle(
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.bold,

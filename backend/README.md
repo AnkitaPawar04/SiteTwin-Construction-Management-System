@@ -14,7 +14,7 @@ A comprehensive backend API system designed for managing construction sites in I
 ## ✨ Key Features
 
 - 🔐 **Token-based Authentication** - Laravel Sanctum with phone-based login
-- 👥 **Role-based Access Control** - Worker, Engineer, Manager, Owner
+- 👥 **Role-based Access Control** - Worker, Engineer, Manager, Purchase Manager, Owner
 - 📍 **GPS-based Attendance** - Location-verified check-in/check-out
 - 📝 **Daily Progress Reports** - Multi-photo uploads with approval workflow
 - ✅ **Task Management** - Assignment and status tracking
@@ -71,10 +71,11 @@ After seeding, login with these phone numbers:
 
 | Role | Phone | Access Level |
 |------|-------|--------------|
-| Owner | 9999999999 | Full dashboard access |
-| Manager | 9999999998 | Approve requests, manage projects |
-| Engineer | 9999999997 | Create tasks, approve DPRs |
-| Worker | 9999999996 | Attendance, view tasks |
+| Owner | 9876543210 | Full dashboard access |
+| Manager | 9876543211 | Approve requests, manage projects |
+| Engineer | 9876543213 | Create tasks, approve DPRs |
+| Worker | 9876543220 | Attendance, view tasks |
+| Purchase Manager | 9876543215 | Procurement, POs, stock management |
 
 ## 🔧 Tech Stack
 

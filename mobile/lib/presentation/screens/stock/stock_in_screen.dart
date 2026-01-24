@@ -288,7 +288,7 @@ class _StockInScreenState extends State<StockInScreen> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                item.gstType,
+                                item.gstType ?? 'N/A',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -457,7 +457,7 @@ class _StockInScreenState extends State<StockInScreen> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      item.gstType,
+                                      item.gstType ?? 'N/A',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,

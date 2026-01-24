@@ -290,6 +290,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 8),
                           _buildTestCredential('Owner', '9876543210'),
                           _buildTestCredential('Manager', '9876543211'),
+                          _buildTestCredential('Purchase Mgr', '9876543215'),
                           _buildTestCredential('Engineer', '9876543213'),
                           _buildTestCredential('Worker', '9876543220'),
                         ],

@@ -39,11 +39,37 @@
 * **Assign tasks** to workers
 * View all tasks and their statuses
 * **Approve / reject DPRs**
-* **Approve / reject material requests**
+* **Approve / reject material requests** (final approval)
 * View attendance summary (team-level)
 * View **stock & inventory** (read-only or controlled edits)
 * View project progress dashboard
 * Receive approval-related notifications
+
+---
+
+## 💼 **Purchase Manager – Features**
+
+* Login / Logout
+* View all projects
+* **Review material requests** (mark as reviewed)
+* **Create Purchase Orders** from material requests
+* **Vendor management**
+  * Select vendors
+  * Manage vendor details
+* **GST-compliant procurement**
+  * Separate GST/Non-GST items
+  * Cannot mix GST types in same PO
+* **Upload vendor invoices** (image/PDF)
+* **PO status management**
+  * Created → Approved → Delivered → Closed
+* **Stock management**
+  * View real-time inventory
+  * Trigger stock-in (auto on PO approval + invoice)
+  * Monitor stock levels
+* **Procurement analytics**
+  * View purchase history
+  * Track vendor performance
+* View notifications (material requests, PO updates)
 
 ---
 

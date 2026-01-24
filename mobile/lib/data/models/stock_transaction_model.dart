@@ -85,26 +85,44 @@ class StockTransactionModel extends HiveObject {
   }
 
   factory StockTransactionModel.fromJson(Map<String, dynamic> json) {
+    // Backend API returns individual transaction records with material details
+    // Not grouped by transaction, so we need to adapt
+    
+    final material = json['material'] as Map<String, dynamic>?;
+    final project = json['project'] as Map<String, dynamic>?;
+    final performer = json['performer'] as Map<String, dynamic>?;
+    
     return StockTransactionModel(
-      id: json['id'] as int,
-      projectId: json['project_id'] as int,
-      transactionType: json['transaction_type'] as String,
-      source: json['source'] as String,
-      sourceId: json['source_id'] as int?,
-      transactionDate: json['transaction_date'] as String,
-      items: (json['items'] as List<dynamic>?)
-          ?.map((item) => StockItemModel.fromJson(item as Map<String, dynamic>))
-          .toList() ?? [],
-      projectName: json['project_name'] as String?,
-      vendorName: json['vendor_name'] as String?,
-      poNumber: json['po_number'] as String?,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      projectId: (json['project_id'] as num?)?.toInt() ?? 0,
+      transactionType: (json['transaction_type'] as String?)?.toUpperCase() ?? 'IN',
+      source: (json['reference_type'] as String?)?.toUpperCase() ?? 'ADJUSTMENT',
+      sourceId: (json['reference_id'] as num?)?.toInt(),
+      transactionDate: json['transaction_date']?.toString() ?? DateTime.now().toIso8601String(),
+      items: [
+        StockItemModel(
+          id: (json['id'] as num?)?.toInt() ?? 0,
+          materialId: (json['material_id'] as num?)?.toInt() ?? 0,
+          materialName: material?['name'] as String? ?? 'Unknown Material',
+          unit: material?['unit'] as String? ?? '',
+          quantity: (json['quantity'] is String)
+              ? double.tryParse(json['quantity']) ?? 0.0
+              : (json['quantity'] as num?)?.toDouble() ?? 0.0,
+          balanceAfter: (json['balance_after_transaction'] is String)
+              ? double.tryParse(json['balance_after_transaction']) ?? 0.0
+              : (json['balance_after_transaction'] as num?)?.toDouble() ?? 0.0,
+        )
+      ],
+      projectName: project?['name'] as String?,
+      vendorName: null,
+      poNumber: json['invoice_id'] as String?,
       notes: json['notes'] as String?,
-      isSynced: json['is_synced'] as bool? ?? true,
-      syncError: json['sync_error'] as String?,
-      createdAt: json['created_at'] as String,
-      updatedAt: json['updated_at'] as String,
-      createdBy: json['created_by'] as int?,
-      createdByName: json['created_by_name'] as String?,
+      isSynced: true,
+      syncError: null,
+      createdAt: json['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+      updatedAt: json['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      createdBy: (json['performed_by'] as num?)?.toInt(),
+      createdByName: performer?['name'] as String?,
     );
   }
 
@@ -189,7 +207,7 @@ class StockItemModel extends HiveObject {
   final String unit;
   
   @HiveField(5)
-  final String gstType; // 'GST' or 'NON_GST'
+  final String? gstType; // 'GST' or 'NON_GST'
   
   @HiveField(6)
   final double? unitPrice;
@@ -205,6 +223,9 @@ class StockItemModel extends HiveObject {
   
   @HiveField(10)
   final String? remarks;
+  
+  @HiveField(11)
+  final double? balanceAfter;
 
   StockItemModel({
     required this.id,
@@ -212,12 +233,13 @@ class StockItemModel extends HiveObject {
     required this.materialName,
     required this.quantity,
     required this.unit,
-    required this.gstType,
+    this.gstType,
     this.unitPrice,
     this.totalAmount,
     this.batchNumber,
     this.expiryDate,
     this.remarks,
+    this.balanceAfter,
   });
 
   // Helper methods
@@ -233,17 +255,22 @@ class StockItemModel extends HiveObject {
 
   factory StockItemModel.fromJson(Map<String, dynamic> json) {
     return StockItemModel(
-      id: json['id'] as int,
-      materialId: json['material_id'] as int,
-      materialName: json['material_name'] as String,
-      quantity: (json['quantity'] as num).toDouble(),
-      unit: json['unit'] as String,
-      gstType: json['gst_type'] as String,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      materialId: (json['material_id'] as num?)?.toInt() ?? 0,
+      materialName: json['material_name'] as String? ?? 'Unknown',
+      quantity: (json['quantity'] is String)
+          ? double.tryParse(json['quantity']) ?? 0.0
+          : (json['quantity'] as num?)?.toDouble() ?? 0.0,
+      unit: json['unit'] as String? ?? '',
+      gstType: json['gst_type'] as String?,
       unitPrice: (json['unit_price'] as num?)?.toDouble(),
       totalAmount: (json['total_amount'] as num?)?.toDouble(),
       batchNumber: json['batch_number'] as String?,
       expiryDate: json['expiry_date'] as String?,
       remarks: json['remarks'] as String?,
+      balanceAfter: (json['balance_after'] is String)
+          ? double.tryParse(json['balance_after']) ?? 0.0
+          : (json['balance_after'] as num?)?.toDouble(),
     );
   }
 
@@ -254,12 +281,13 @@ class StockItemModel extends HiveObject {
       'material_name': materialName,
       'quantity': quantity,
       'unit': unit,
-      'gst_type': gstType,
+      if (gstType != null) 'gst_type': gstType,
       'unit_price': unitPrice,
       'total_amount': totalAmount,
       'batch_number': batchNumber,
       'expiry_date': expiryDate,
       'remarks': remarks,
+      'balance_after': balanceAfter,
     };
   }
 

@@ -236,5 +236,179 @@ class StockService
 
         return $query->get();
     }
+
+    /**
+     * Get all stock transactions across all projects.
+     * 
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getAllTransactions()
+    {
+        return StockTransaction::with(['material', 'project', 'performer'])
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+    }
+
+    /**
+     * Get all stock across all projects with current balances.
+     * 
+     * @return array
+     */
+    public function getAllStock(): array
+    {
+        $materials = Material::all();
+        $projects = \App\Models\Project::all();
+        $stockData = [];
+
+        foreach ($materials as $material) {
+            $totalStock = 0;
+            $projectStocks = [];
+
+            foreach ($projects as $project) {
+                $stock = $material->getCurrentStock($project->id);
+                if ($stock > 0) {
+                    $totalStock += $stock;
+                    $projectStocks[] = [
+                        'project_id' => $project->id,
+                        'project_name' => $project->name,
+                        'stock' => $stock,
+                    ];
+                }
+            }
+
+            if ($totalStock > 0) {
+                $stockData[] = [
+                    'material_id' => $material->id,
+                    'material_name' => $material->name,
+                    'unit' => $material->unit,
+                    'gst_type' => $material->gst_type,
+                    'gst_percentage' => $material->gst_percentage,
+                    'total_stock' => $totalStock,
+                    'project_wise_stock' => $projectStocks,
+                ];
+            }
+        }
+
+        return $stockData;
+    }
+
+    /**
+     * Get stock for a specific project.
+     * 
+     * @param int $projectId
+     * @return array
+     */
+    public function getStockByProject(int $projectId): array
+    {
+        $materials = Material::all();
+        $stockData = [];
+
+        foreach ($materials as $material) {
+            $stock = $material->getCurrentStock($projectId);
+            if ($stock > 0) {
+                $stockData[] = [
+                    'material_id' => $material->id,
+                    'material_name' => $material->name,
+                    'unit' => $material->unit,
+                    'gst_type' => $material->gst_type,
+                    'gst_percentage' => $material->gst_percentage,
+                    'current_stock' => $stock,
+                ];
+            }
+        }
+
+        return $stockData;
+    }
+
+    /**
+     * Get stock transactions for a specific project.
+     * 
+     * @param int $projectId
+     * @param int|null $materialId
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getStockTransactions(int $projectId, ?int $materialId = null)
+    {
+        $query = StockTransaction::with(['material', 'performer'])
+            ->where('project_id', $projectId)
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('id', 'desc');
+
+        if ($materialId) {
+            $query->where('material_id', $materialId);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Add stock (manual IN transaction).
+     * 
+     * @param int $projectId
+     * @param int $materialId
+     * @param float $quantity
+     * @param int|null $referenceId
+     * @return StockTransaction
+     * @throws Exception
+     */
+    public function addStock(
+        int $projectId,
+        int $materialId,
+        float $quantity,
+        ?int $referenceId = null
+    ): StockTransaction {
+        return $this->createStockTransaction(
+            materialId: $materialId,
+            projectId: $projectId,
+            transactionType: StockTransaction::TYPE_IN,
+            quantity: $quantity,
+            referenceType: StockTransaction::REFERENCE_ADJUSTMENT,
+            referenceId: $referenceId ?? 0,
+            invoiceId: null,
+            performedBy: auth()->id(),
+            notes: "Manual stock IN"
+        );
+    }
+
+    /**
+     * Remove stock (manual OUT transaction).
+     * 
+     * @param int $projectId
+     * @param int $materialId
+     * @param float $quantity
+     * @param int|null $referenceId
+     * @return StockTransaction
+     * @throws Exception
+     */
+    public function removeStock(
+        int $projectId,
+        int $materialId,
+        float $quantity,
+        ?int $referenceId = null
+    ): StockTransaction {
+        // Check if sufficient stock available
+        $material = Material::findOrFail($materialId);
+        
+        if (!$material->hasSufficientStock($projectId, $quantity)) {
+            throw new Exception(
+                "Insufficient stock for material '{$material->name}'. " .
+                "Available: {$material->getCurrentStock($projectId)}, Required: {$quantity}"
+            );
+        }
+
+        return $this->createStockTransaction(
+            materialId: $materialId,
+            projectId: $projectId,
+            transactionType: StockTransaction::TYPE_OUT,
+            quantity: $quantity,
+            referenceType: StockTransaction::REFERENCE_ADJUSTMENT,
+            referenceId: $referenceId ?? 0,
+            invoiceId: null,
+            performedBy: auth()->id(),
+            notes: "Manual stock OUT"
+        );
+    }
 }
+
 
