@@ -79,4 +79,41 @@ class Project extends Model
     {
         return $this->hasMany(Invoice::class);
     }
+
+    // PHASE 4: Costing relationships
+    public function consumptionStandards()
+    {
+        return $this->hasMany(MaterialConsumptionStandard::class);
+    }
+
+    public function projectUnits()
+    {
+        return $this->hasMany(ProjectUnit::class);
+    }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+
+    // PHASE 5: Advanced field & compliance relationships
+    public function contractorRatings()
+    {
+        return $this->hasMany(ContractorRating::class);
+    }
+
+    public function dailyWagerAttendance()
+    {
+        return $this->hasMany(DailyWagerAttendance::class);
+    }
+
+    public function permits()
+    {
+        return $this->hasMany(PermitToWork::class);
+    }
+
+    public function pettyCashTransactions()
+    {
+        return $this->hasMany(PettyCashTransaction::class);
+    }
 }
