@@ -83,10 +83,10 @@ class PurchaseOrderModel extends HiveObject {
           : null,
       vendorId: _parseId(json['vendor_id']),
       poNumber: json['po_number']?.toString() ?? '',
-      poDate: json['po_date']?.toString() ?? '',
-      totalAmount: _parseDouble(json['total_amount']),
-      gstType: json['gst_type']?.toString() ?? 'GST',
-      status: json['status']?.toString() ?? 'CREATED',
+      poDate: (json['po_date'] ?? json['created_at'])?.toString() ?? DateTime.now().toIso8601String(),
+      totalAmount: _parseDouble(json['grand_total'] ?? json['total_amount']), // Backend uses grand_total
+      gstType: (json['type']?.toString() == 'gst' || json['type']?.toString() == 'GST') ? 'GST' : 'NON_GST',
+      status: json['status']?.toString().toUpperCase() ?? 'CREATED',
       items: json['items'] != null
           ? (json['items'] as List)
               .map((item) => PurchaseOrderItemModel.fromJson(item as Map<String, dynamic>))
@@ -94,8 +94,8 @@ class PurchaseOrderModel extends HiveObject {
           : [],
       vendorName: json['vendor_name']?.toString(),
       notes: json['notes']?.toString(),
-      invoiceUrl: json['invoice_url']?.toString(),
-      deliveryDate: json['delivery_date']?.toString(),
+      invoiceUrl: json['invoice_file']?.toString(), // Backend uses invoice_file
+      deliveryDate: json['delivered_at']?.toString(),
       createdAt: json['created_at']?.toString() ?? '',
       updatedAt: json['updated_at']?.toString() ?? '',
       isSynced: json['is_synced'] as bool? ?? true,
@@ -226,15 +226,21 @@ class PurchaseOrderItemModel {
   });
 
   factory PurchaseOrderItemModel.fromJson(Map<String, dynamic> json) {
+    // Extract material name from relationship if available
+    final material = json['material'] as Map<String, dynamic>?;
+    final materialName = material?['name']?.toString() ?? 
+                        json['material_name']?.toString() ?? 
+                        '';
+    
     return PurchaseOrderItemModel(
       id: _parseId(json['id']),
       purchaseOrderId: _parseId(json['purchase_order_id']),
-      productId: _parseId(json['product_id']),
-      productName: json['product_name']?.toString() ?? '',
+      productId: _parseId(json['material_id']), // Backend uses material_id
+      productName: materialName,
       quantity: _parseInt(json['quantity']),
-      unitPrice: _parseDouble(json['unit_price']),
-      gstRate: _parseDouble(json['gst_rate']),
-      totalPrice: _parseDouble(json['total_price']),
+      unitPrice: _parseDouble(json['rate']), // Backend uses 'rate'
+      gstRate: _parseDouble(json['gst_percentage'] ?? json['gst_rate']), // Backend uses gst_percentage
+      totalPrice: _parseDouble(json['total_amount'] ?? json['total_price']), // Backend uses total_amount
       unit: json['unit']?.toString(),
     );
   }
@@ -250,8 +256,10 @@ class PurchaseOrderItemModel {
     if (value is int) return value;
     if (value is double) return value.toInt();
     if (value == null) return 0;
-    final parsed = int.tryParse(value.toString());
-    return parsed ?? 0;
+    // Try parsing as double first (handles "10.00"), then convert to int
+    final doubleValue = double.tryParse(value.toString());
+    if (doubleValue != null) return doubleValue.toInt();
+    return 0;
   }
 
   static double _parseDouble(dynamic value) {

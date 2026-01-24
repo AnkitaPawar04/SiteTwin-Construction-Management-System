@@ -4,6 +4,7 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/core/constants/app_constants.dart';
 import 'package:mobile/data/models/purchase_order_model.dart';
 import 'package:mobile/providers/providers.dart';
+import 'package:mobile/presentation/screens/purchase_order/purchase_order_detail_screen.dart';
 
 /// Purchase Order List Screen
 /// Shows all purchase orders with status filtering
@@ -16,7 +17,7 @@ class PurchaseOrderListScreen extends ConsumerStatefulWidget {
 }
 
 class _PurchaseOrderListScreenState
-    extends ConsumerState<PurchaseOrderListScreen> {
+    extends ConsumerState<PurchaseOrderListScreen> with WidgetsBindingObserver {
   bool _isLoading = false;
   List<PurchaseOrderModel> _purchaseOrders = [];
   String _selectedFilter = 'ALL';
@@ -24,7 +25,22 @@ class _PurchaseOrderListScreenState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadPurchaseOrders();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Reload when coming back to this screen
+      _loadPurchaseOrders();
+    }
   }
 
   Future<void> _loadPurchaseOrders() async {
@@ -183,8 +199,17 @@ class _POCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
-        onTap: () {
-          // TODO: Navigate to PO detail screen
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PurchaseOrderDetailScreen(
+                purchaseOrderId: purchaseOrder.id,
+              ),
+            ),
+          );
+          // If detail screen updated status, we might want to refresh
+          // but the detail screen already shows updated data
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:mobile/data/models/purchase_order_model.dart';
 import 'package:mobile/core/network/api_client.dart';
 
@@ -57,11 +58,12 @@ class PurchaseOrderRepository {
     required String invoiceType,
     required String invoiceNumber,
   }) async {
-    final response = await _apiClient.postFormData('/purchase-orders/$id/invoice', {
-      'invoice': invoicePath,
+    final formData = FormData.fromMap({
+      'invoice': await MultipartFile.fromFile(invoicePath),
       'invoice_type': invoiceType,
       'invoice_number': invoiceNumber,
     });
+    final response = await _apiClient.postFormData('/purchase-orders/$id/invoice', formData);
     return PurchaseOrderModel.fromJson(response.data['data']);
   }
 

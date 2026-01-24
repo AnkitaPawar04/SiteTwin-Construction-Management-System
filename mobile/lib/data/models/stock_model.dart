@@ -33,20 +33,16 @@ class StockModel {
     // Check if this is from the new getAllStock API (Phase 3 format)
     if (json.containsKey('material_name') && json.containsKey('total_stock')) {
       return StockModel(
-        id: (json['material_id'] as num?)?.toInt() ?? 0,
+        id: _parseIntValue(json['material_id']),
         projectId: 0, // Not available in this format
-        materialId: (json['material_id'] as num?)?.toInt() ?? 0,
-        availableQuantity: (json['total_stock'] is String)
-            ? double.tryParse(json['total_stock']) ?? 0.0
-            : (json['total_stock'] as num?)?.toDouble() ?? 0.0,
+        materialId: _parseIntValue(json['material_id']),
+        availableQuantity: _parseDoubleValue(json['total_stock']),
         materialName: json['material_name'] as String?,
         materialUnit: json['unit'] as String?,
         projectName: null,
         gstType: json['gst_type'] as String?,
-        gstPercentage: (json['gst_percentage'] as num?)?.toDouble(),
-        totalStock: (json['total_stock'] is String)
-            ? double.tryParse(json['total_stock']) ?? 0.0
-            : (json['total_stock'] as num?)?.toDouble(),
+        gstPercentage: _parseDoubleValue(json['gst_percentage']),
+        totalStock: _parseDoubleValue(json['total_stock']),
         projectWiseStock: (json['project_wise_stock'] as List<dynamic>?)
             ?.map((item) => ProjectStockModel.fromJson(item as Map<String, dynamic>))
             .toList(),
@@ -60,22 +56,36 @@ class StockModel {
     final project = json['project'] as Map<String, dynamic>?;
     
     return StockModel(
-      id: (json['id'] as num?)?.toInt() ?? 0,
-      projectId: (json['project_id'] as num?)?.toInt() ?? 0,
-      materialId: (json['material_id'] as num?)?.toInt() ?? 0,
-      availableQuantity: (json['available_quantity'] is String)
-          ? double.tryParse(json['available_quantity']) ?? 0.0
-          : (json['available_quantity'] as num?)?.toDouble() ?? 0.0,
+      id: _parseIntValue(json['id']),
+      projectId: _parseIntValue(json['project_id']),
+      materialId: _parseIntValue(json['material_id']),
+      availableQuantity: _parseDoubleValue(json['available_quantity']),
       materialName: material?['name'] as String?,
       materialUnit: material?['unit'] as String?,
       projectName: project?['name'] as String?,
       gstType: material?['gst_type'] as String?,
-      gstPercentage: (material?['gst_percentage'] as num?)?.toDouble(),
+      gstPercentage: _parseDoubleValue(material?['gst_percentage']),
       totalStock: null,
       projectWiseStock: null,
       createdAt: json['created_at']?.toString(),
       updatedAt: json['updated_at']?.toString(),
     );
+  }
+
+  static int _parseIntValue(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static double _parseDoubleValue(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
   Map<String, dynamic> toJson() {
@@ -104,11 +114,9 @@ class ProjectStockModel {
 
   factory ProjectStockModel.fromJson(Map<String, dynamic> json) {
     return ProjectStockModel(
-      projectId: (json['project_id'] as num?)?.toInt() ?? 0,
+      projectId: StockModel._parseIntValue(json['project_id']),
       projectName: json['project_name'] as String? ?? '',
-      stock: (json['stock'] is String)
-          ? double.tryParse(json['stock']) ?? 0.0
-          : (json['stock'] as num?)?.toDouble() ?? 0.0,
+      stock: StockModel._parseDoubleValue(json['stock']),
     );
   }
 

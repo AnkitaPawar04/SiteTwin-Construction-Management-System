@@ -358,14 +358,14 @@ class _MaterialRequestProcurementScreenState
                                       Expanded(
                                         child: _buildStockInfo(
                                           'Requested',
-                                          '${item.quantity.toInt()} ${item.unit ?? 'units'}',
+                                          '${item.quantity} ${item.unit ?? 'units'}',
                                           Colors.blue,
                                         ),
                                       ),
                                       Expanded(
                                         child: _buildStockInfo(
                                           'Available',
-                                          '${available.toInt()} ${item.unit ?? 'units'}',
+                                          '$available ${item.unit ?? 'units'}',
                                           stockColor,
                                         ),
                                       ),

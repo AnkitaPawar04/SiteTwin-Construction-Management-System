@@ -5,6 +5,7 @@ import 'package:mobile/core/constants/app_constants.dart';
 import 'package:mobile/data/models/material_request_model.dart';
 import 'package:mobile/data/models/vendor_model.dart';
 import 'package:mobile/data/models/purchase_order_model.dart';
+import 'package:mobile/providers/providers.dart';
 
 /// Purchase Order Creation Screen
 /// Allows Purchase Managers to create POs from material requests
@@ -199,10 +200,26 @@ class _PurchaseOrderCreateScreenState
     setState(() => _isLoading = true);
     
     try {
-      // TODO: Call repository to create PO
-      // For now, showing success message
+      // Prepare PO items with pricing
+      final items = widget.materialRequest.items.map((item) {
+        final pricing = _itemPricing[item.materialId]!;
+        return {
+          'material_id': item.materialId,
+          'quantity': item.quantity,
+          'unit': item.unit ?? 'units',
+          'rate': pricing['unit_price'],
+          'gst_rate': pricing['gst_rate'],
+        };
+      }).toList();
       
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+      // Create PO via repository
+      final repository = ref.read(purchaseOrderRepositoryProvider);
+      await repository.createPurchaseOrder(
+        projectId: widget.materialRequest.projectId,
+        vendorId: _selectedVendor!.id,
+        materialRequestId: widget.materialRequest.id,
+        items: items,
+      );
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -216,7 +233,10 @@ class _PurchaseOrderCreateScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create PO: $e')),
+          SnackBar(
+            content: Text('Failed to create PO: $e'),
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } finally {
