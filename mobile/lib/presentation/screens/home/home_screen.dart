@@ -6,14 +6,13 @@ import 'package:mobile/presentation/screens/attendance/attendance_screen.dart';
 import 'package:mobile/presentation/screens/tasks/task_screen.dart';
 import 'package:mobile/presentation/screens/tasks/task_assignment_screen.dart';
 import 'package:mobile/presentation/screens/dpr/dpr_list_screen.dart';
+import 'package:mobile/presentation/screens/dpr/dpr_create_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_list_screen.dart';
 import 'package:mobile/presentation/screens/dashboard/dashboard_screen.dart';
-import 'package:mobile/presentation/screens/notifications/notifications_screen.dart';
 import 'package:mobile/presentation/screens/projects/projects_screen.dart';
 import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dart';
 import 'package:mobile/presentation/screens/invoices/invoices_screen.dart';
 import 'package:mobile/presentation/screens/analytics/time_vs_cost_screen.dart';
-import 'package:mobile/presentation/widgets/project_switcher.dart';
 import 'package:mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:mobile/presentation/screens/settings/settings_screen.dart';
 import 'package:mobile/presentation/widgets/connection_indicator.dart';
@@ -70,19 +69,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_getTitle(loc, _currentIndex, user.role)),
-        actions: [
-          const ProjectSwitcher(),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const NotificationsScreen(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       drawer: _buildDrawer(context, user),
       body: Column(
@@ -93,6 +79,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       bottomNavigationBar: _buildBottomNavigation(context, user),
+      floatingActionButton: _buildFloatingActionButton(context, user),
     );
   }
   
@@ -478,6 +465,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     
     // Owner gets no bottom navigation - uses drawer only
+    return null;
+  }
+  
+  Widget? _buildFloatingActionButton(BuildContext context, dynamic user) {
+    // Show "New DPR" button only for workers/engineers on DPR screen (index 3)
+    if ((user.role == 'worker' || user.role == 'engineer') && _currentIndex == 3) {
+      return FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const DprCreateScreen(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('New DPR'),
+      );
+    }
     return null;
   }
 }

@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:mobile/data/models/dpr_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:mobile/providers/auth_provider.dart';
-import 'package:mobile/presentation/screens/dpr/dpr_create_screen.dart';
 import 'package:mobile/presentation/screens/dpr/dpr_approval_screen.dart';
 import 'package:mobile/presentation/widgets/sync_status_badge.dart';
 
@@ -48,12 +47,11 @@ class DprListScreen extends ConsumerWidget {
     final user = authState.value;
     final isApprover = user?.role == 'owner' || user?.role == 'manager';
     
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(myDprsProvider);
-        },
-        child: dprsAsync.when(
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(myDprsProvider);
+      },
+      child: dprsAsync.when(
           data: (dprs) {
             // Filter DPRs by status
             var filteredDprs = dprs;
@@ -170,20 +168,6 @@ class DprListScreen extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-      floatingActionButton: user?.role == 'worker' || user?.role == 'engineer'
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const DprCreateScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('New DPR'),
-            )
-          : null,
     );
   }
 

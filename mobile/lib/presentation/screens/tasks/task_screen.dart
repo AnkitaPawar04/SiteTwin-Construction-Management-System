@@ -29,20 +29,14 @@ class TaskScreen extends ConsumerWidget {
     final isManagerOrOwner = user?.role == 'manager' || user?.role == 'owner';
     final tasksAsync = ref.watch(isManagerOrOwner ? allTasksProvider : myTasksProvider);
     
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tasks'),
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(myTasksProvider);
-          ref.invalidate(allTasksProvider);
-        },
-        child: isManagerOrOwner
-            ? _buildManagerView(context, ref, tasksAsync)
-            : _buildWorkerView(context, tasksAsync),
-      ),
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(myTasksProvider);
+        ref.invalidate(allTasksProvider);
+      },
+      child: isManagerOrOwner
+          ? _buildManagerView(context, ref, tasksAsync)
+          : _buildWorkerView(context, tasksAsync),
     );
   }
 
