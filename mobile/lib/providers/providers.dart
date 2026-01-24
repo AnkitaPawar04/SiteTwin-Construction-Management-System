@@ -86,6 +86,7 @@ final dprRepositoryProvider = Provider<DprRepository>((ref) {
     ref.watch(apiClientProvider),
     ref.watch(networkInfoProvider),
     ref.watch(dprBoxProvider),
+    ref.watch(projectBoxProvider),
   );
 });
 

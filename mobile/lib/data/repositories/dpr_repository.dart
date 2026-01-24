@@ -13,11 +13,13 @@ class DprRepository {
   final ApiClient _apiClient;
   final NetworkInfo _networkInfo;
   final Box<DprModel> _dprBox;
+  final Box<ProjectModel> _projectBox;
   
   DprRepository(
     this._apiClient,
     this._networkInfo,
     this._dprBox,
+    this._projectBox,
   );
   
   Future<DprModel> submitDpr({
@@ -232,10 +234,24 @@ class DprRepository {
     try {
       final response = await _apiClient.get(ApiConstants.projects);
       final List<dynamic> data = response.data['data'] ?? response.data;
-      return data.map((json) => ProjectModel.fromJson(json)).toList();
+      final projects = data.map((json) => ProjectModel.fromJson(json)).toList();
+      
+      // Cache projects for offline use
+      await _projectBox.clear();
+      for (var project in projects) {
+        await _projectBox.add(project);
+      }
+      AppLogger.info('Projects cached: ${projects.length}');
+      
+      return projects;
     } catch (e) {
-      AppLogger.error('Failed to fetch user projects', e);
-      rethrow;
+      AppLogger.warning('Failed to fetch user projects from API, loading from cache', e);
+      
+      // Load from cache when offline
+      final cachedProjects = _projectBox.values.toList();
+      AppLogger.info('Loaded ${cachedProjects.length} projects from cache');
+      
+      return cachedProjects;
     }
   }
 

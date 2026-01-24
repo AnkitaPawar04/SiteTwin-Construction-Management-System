@@ -11,7 +11,7 @@ class UserSeeder extends Seeder
     {
         // Owner
         User::create([
-            'name' => 'Rajesh Kumar (Owner)',
+            'name' => 'Shubham Shinde',
             'phone' => '9876543210',
             'role' => 'owner',
             'language' => 'en',
@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
 
         // Manager
         User::create([
-            'name' => 'Amit Sharma (Manager)',
+            'name' => 'Amit Sharma',
             'phone' => '9876543211',
             'role' => 'manager',
             'language' => 'en',
@@ -29,7 +29,7 @@ class UserSeeder extends Seeder
 
         // Engineer
         User::create([
-            'name' => 'Vikram Patel (Engineer)',
+            'name' => 'Vikram Patel',
             'phone' => '9876543213',
             'role' => 'engineer',
             'language' => 'en',
@@ -38,7 +38,7 @@ class UserSeeder extends Seeder
 
         // Worker
         User::create([
-            'name' => 'Ramu Yadav (Worker)',
+            'name' => 'Ramu Yadav',
             'phone' => '9876543220',
             'role' => 'worker',
             'language' => 'en',

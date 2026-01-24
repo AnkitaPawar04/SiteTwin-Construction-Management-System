@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:hive/hive.dart';
 import 'package:mobile/core/constants/api_constants.dart';
@@ -30,7 +31,7 @@ class AuthRepository {
       // Save token and user
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(AppConstants.tokenKey, token);
-      await prefs.setString(AppConstants.userKey, user.toJson().toString());
+      await prefs.setString(AppConstants.userKey, jsonEncode(user.toJson()));
       
       AppLogger.info('Login successful for ${user.name}');
       
@@ -106,9 +107,31 @@ class AuthRepository {
   Future<UserModel?> getCurrentUser() async {
     try {
       final response = await _apiClient.get(ApiConstants.me);
-      return UserModel.fromJson(response.data['data']);
+      final user = UserModel.fromJson(response.data['data']);
+      
+      // Update local cache when online
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(AppConstants.userKey, jsonEncode(user.toJson()));
+      
+      return user;
     } on DioException catch (e) {
-      AppLogger.error('Failed to get current user', e);
+      AppLogger.warning('Failed to get current user from API, trying local cache', e);
+      
+      // Try to load from local storage when offline
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final userJson = prefs.getString(AppConstants.userKey);
+        
+        if (userJson != null && userJson.isNotEmpty) {
+          final userMap = jsonDecode(userJson) as Map<String, dynamic>;
+          final user = UserModel.fromJson(userMap);
+          AppLogger.info('User loaded from local cache (offline mode): ${user.name}');
+          return user;
+        }
+      } catch (localError) {
+        AppLogger.error('Failed to load user from local cache', localError);
+      }
+      
       return null;
     }
   }

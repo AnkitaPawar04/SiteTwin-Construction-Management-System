@@ -179,7 +179,7 @@ class _TaskAssignmentScreenState extends ConsumerState<TaskAssignmentScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int>(
-                        initialValue: _selectedUserId,
+                        value: _selectedUserId,
                         decoration: const InputDecoration(
                           labelText: 'Assign To (Optional)',
                           border: OutlineInputBorder(),
