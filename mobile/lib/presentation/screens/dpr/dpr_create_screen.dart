@@ -20,8 +20,8 @@ final projectsProvider = FutureProvider.autoDispose<List<ProjectModel>>((ref) as
 final myTasksForDprProvider = FutureProvider.autoDispose<List<TaskModel>>((ref) async {
   final repo = ref.watch(taskRepositoryProvider);
   final allTasks = await repo.getMyTasks();
-  // Only show in-progress tasks for DPR creation
-  return allTasks.where((task) => task.status == AppConstants.taskInProgress).toList();
+  // Only show completed tasks for DPR creation
+  return allTasks.where((task) => task.status == AppConstants.taskCompleted).toList();
 });
 
 class DprCreateScreen extends ConsumerStatefulWidget {
@@ -351,12 +351,12 @@ class _DprCreateScreenState extends ConsumerState<DprCreateScreen> {
                           Icon(Icons.info_outline, color: Colors.orange[700]),
                           const SizedBox(height: 8),
                           Text(
-                            'No in-progress tasks for this project',
+                            'No completed tasks for this project',
                             style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Start a task for this project first',
+                            'Complete a task for this project first',
                             style: TextStyle(color: Colors.grey[700], fontSize: 12),
                           ),
                         ],

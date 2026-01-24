@@ -15,15 +15,19 @@ class TaskService
         $this->invoiceService = $invoiceService;
     }
 
-    public function createTask($projectId, $assignedTo, $assignedBy, $title, $description)
+    public function createTask($projectId, $assignedTo, $assignedBy, $title, $description, $billingAmount = null, $gstPercentage = null, $priority = null, $dueDate = null)
     {
-        return DB::transaction(function () use ($projectId, $assignedTo, $assignedBy, $title, $description) {
+        return DB::transaction(function () use ($projectId, $assignedTo, $assignedBy, $title, $description, $billingAmount, $gstPercentage, $priority, $dueDate) {
             $task = Task::create([
                 'project_id' => $projectId,
                 'assigned_to' => $assignedTo,
                 'assigned_by' => $assignedBy,
                 'title' => $title,
                 'description' => $description,
+                'billing_amount' => $billingAmount,
+                'gst_percentage' => $gstPercentage ?? 18.00,
+                'priority' => $priority ?? 'medium',
+                'due_date' => $dueDate,
                 'status' => Task::STATUS_PENDING,
             ]);
 

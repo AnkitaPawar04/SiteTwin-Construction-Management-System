@@ -48,7 +48,11 @@ class TaskController extends Controller
             $request->assigned_to,
             $request->user()->id,
             $request->title,
-            $request->description
+            $request->description,
+            $request->billing_amount,
+            $request->gst_percentage,
+            $request->priority,
+            $request->due_date
         );
 
         return response()->json([

@@ -247,7 +247,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const DprListScreen(),
+                    builder: (context) => Scaffold(
+                      appBar: AppBar(
+                        title: Text(loc.dailyProgress),
+                      ),
+                      body: const DprListScreen(),
+                    ),
                   ),
                 );
               },

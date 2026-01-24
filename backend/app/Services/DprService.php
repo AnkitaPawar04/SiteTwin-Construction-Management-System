@@ -111,6 +111,8 @@ class DprService
 
             // Trigger auto-invoice generation if approved
             if ($status === DailyProgressReport::STATUS_APPROVED) {
+                // Reload DPR with tasks relationship to ensure data is available
+                $dpr->load('tasks');
                 $this->invoiceService->generateInvoiceFromDpr($dpr);
             }
 
@@ -152,6 +154,8 @@ class DprService
 
             // Trigger auto-invoice generation if approved
             if ($status === 'approved' || $status === DailyProgressReport::STATUS_APPROVED) {
+                // Reload DPR with tasks relationship to ensure data is available
+                $dpr->load('tasks');
                 $this->invoiceService->generateInvoiceFromDpr($dpr);
             }
 
