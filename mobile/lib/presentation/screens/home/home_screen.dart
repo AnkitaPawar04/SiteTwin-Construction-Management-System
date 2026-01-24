@@ -17,6 +17,7 @@ import 'package:mobile/presentation/widgets/project_switcher.dart';
 import 'package:mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:mobile/presentation/screens/settings/settings_screen.dart';
 import 'package:mobile/presentation/widgets/connection_indicator.dart';
+import 'package:mobile/presentation/widgets/global_sync_indicator.dart';
 import 'package:mobile/presentation/screens/admin/user_management_screen.dart';
 import 'package:mobile/presentation/screens/attendance/all_users_attendance_screen.dart';
 
@@ -87,6 +88,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: Column(
         children: [
           const ConnectionIndicator(),
+          const GlobalSyncIndicator(),
           Expanded(child: _getScreensForRole(user.role)[_currentIndex]),
         ],
       ),

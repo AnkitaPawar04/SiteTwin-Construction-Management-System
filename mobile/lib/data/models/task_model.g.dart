@@ -28,13 +28,15 @@ class TaskModelAdapter extends TypeAdapter<TaskModel> {
       localId: fields[8] as String?,
       projectName: fields[9] as String?,
       assignedByName: fields[10] as String?,
+      billingAmount: fields[11] as double?,
+      gstPercentage: fields[12] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TaskModel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +58,11 @@ class TaskModelAdapter extends TypeAdapter<TaskModel> {
       ..writeByte(9)
       ..write(obj.projectName)
       ..writeByte(10)
-      ..write(obj.assignedByName);
+      ..write(obj.assignedByName)
+      ..writeByte(11)
+      ..write(obj.billingAmount)
+      ..writeByte(12)
+      ..write(obj.gstPercentage);
   }
 
   @override

@@ -47,6 +47,15 @@ class PreferencesService {
     return _preferences!.getString(_themeKey) ?? 'light';
   }
   
+  // Server URL Preferences
+  Future<void> setServerUrl(String url) async {
+    await _preferences!.setString('server_url', url);
+  }
+  
+  String? getServerUrl() {
+    return _preferences!.getString('server_url');
+  }
+  
   // Clear all preferences
   Future<void> clearAll() async {
     await _preferences!.clear();

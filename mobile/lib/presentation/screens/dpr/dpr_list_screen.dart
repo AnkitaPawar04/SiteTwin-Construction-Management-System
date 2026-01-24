@@ -6,6 +6,7 @@ import 'package:mobile/providers/providers.dart';
 import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/presentation/screens/dpr/dpr_create_screen.dart';
 import 'package:mobile/presentation/screens/dpr/dpr_approval_screen.dart';
+import 'package:mobile/presentation/widgets/sync_status_badge.dart';
 
 final myDprsProvider = FutureProvider.autoDispose<List<DprModel>>((ref) async {
   final repo = ref.watch(dprRepositoryProvider);
@@ -374,10 +375,19 @@ class DprCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    DateFormat('dd MMM yyyy').format(date),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DateFormat('dd MMM yyyy').format(date),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        SyncStatusBadge(isSynced: dpr.isSynced, isSmall: true),
+                      ],
                     ),
                   ),
                   Container(

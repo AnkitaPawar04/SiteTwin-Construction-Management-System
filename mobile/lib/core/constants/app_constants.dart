@@ -1,12 +1,13 @@
 class AppConstants {
   // App Info
-  static const String appName = 'Construction Manager';
+  static const String appName = 'SiteTwin';
   static const String appVersion = '1.0.0';
   
   // Storage Keys
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
   static const String languageKey = 'app_language';
+  static const String serverUrlKey = 'server_url';
   
   // Hive Box Names
   static const String attendanceBox = 'attendance_box';
@@ -14,6 +15,7 @@ class AppConstants {
   static const String taskBox = 'task_box';
   static const String materialRequestBox = 'material_request_box';
   static const String syncQueueBox = 'sync_queue_box';
+  static const String projectBox = 'project_box';
   
   // Location Settings
   static const double allowedDistanceInMeters = 100.0;

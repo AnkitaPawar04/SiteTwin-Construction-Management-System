@@ -1,13 +1,37 @@
-class ProjectModel {
+import 'package:hive/hive.dart';
+
+part 'project_model.g.dart';
+
+@HiveType(typeId: 8)
+class ProjectModel extends HiveObject {
+  @HiveField(0)
   final int id;
+  
+  @HiveField(1)
   final String name;
+  
+  @HiveField(2)
   final String location;
+  
+  @HiveField(3)
   final String? description;
+  
+  @HiveField(4)
   final double latitude;
+  
+  @HiveField(5)
   final double longitude;
+  
+  @HiveField(6)
   final int geofenceRadiusMeters;
+  
+  @HiveField(7)
   final String startDate;
+  
+  @HiveField(8)
   final String endDate;
+  
+  @HiveField(9)
   final int ownerId;
   
   ProjectModel({

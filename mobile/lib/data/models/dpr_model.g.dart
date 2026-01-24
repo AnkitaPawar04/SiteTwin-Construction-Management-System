@@ -30,13 +30,16 @@ class DprModelAdapter extends TypeAdapter<DprModel> {
       isSynced: fields[10] as bool,
       localId: fields[11] as String?,
       projectName: fields[12] as String?,
+      billingAmount: fields[13] as double?,
+      gstPercentage: fields[14] as double?,
+      taskId: fields[15] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DprModel obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,7 +65,13 @@ class DprModelAdapter extends TypeAdapter<DprModel> {
       ..writeByte(11)
       ..write(obj.localId)
       ..writeByte(12)
-      ..write(obj.projectName);
+      ..write(obj.projectName)
+      ..writeByte(13)
+      ..write(obj.billingAmount)
+      ..writeByte(14)
+      ..write(obj.gstPercentage)
+      ..writeByte(15)
+      ..write(obj.taskId);
   }
 
   @override

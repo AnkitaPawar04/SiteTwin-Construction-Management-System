@@ -10,7 +10,7 @@ class ApiClient {
   ApiClient() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: ApiConstants.baseUrl,
+        baseUrl: ApiConstants.baseUrl, // Will be updated dynamically
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         headers: {
@@ -23,13 +23,20 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Add auth token
+          // Get dynamic server URL from preferences
           final prefs = await SharedPreferences.getInstance();
+          final serverUrl = prefs.getString(AppConstants.serverUrlKey);
+          if (serverUrl != null && serverUrl.isNotEmpty) {
+            // Update base URL if custom URL is set
+            options.baseUrl = serverUrl;
+          }
+          
+          // Add auth token
           final token = prefs.getString(AppConstants.tokenKey);
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-          AppLogger.debug('${options.method} ${options.path}');
+          AppLogger.debug('${options.method} ${options.baseUrl}${options.path}');
           return handler.next(options);
         },
         onResponse: (response, handler) {

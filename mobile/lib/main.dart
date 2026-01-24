@@ -9,6 +9,9 @@ import 'package:mobile/data/models/user_model.dart';
 import 'package:mobile/data/models/attendance_model.dart';
 import 'package:mobile/data/models/task_model.dart';
 import 'package:mobile/data/models/dpr_model.dart';
+import 'package:mobile/data/models/material_request_model.dart';
+import 'package:mobile/data/models/project_model.dart';
+import 'package:mobile/data/models/sync_queue_model.dart';
 import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/providers/preferences_provider.dart';
 import 'package:mobile/presentation/screens/auth/login_screen.dart';
@@ -25,11 +28,18 @@ void main() async {
   Hive.registerAdapter(AttendanceModelAdapter());
   Hive.registerAdapter(TaskModelAdapter());
   Hive.registerAdapter(DprModelAdapter());
+  Hive.registerAdapter(MaterialRequestModelAdapter());
+  Hive.registerAdapter(MaterialRequestItemModelAdapter());
+  Hive.registerAdapter(ProjectModelAdapter());
+  Hive.registerAdapter(SyncQueueModelAdapter());
   
   // Open Boxes
   await Hive.openBox<AttendanceModel>(AppConstants.attendanceBox);
   await Hive.openBox<TaskModel>(AppConstants.taskBox);
   await Hive.openBox<DprModel>(AppConstants.dprBox);
+  await Hive.openBox<MaterialRequestModel>(AppConstants.materialRequestBox);
+  await Hive.openBox<ProjectModel>(AppConstants.projectBox);
+  await Hive.openBox<SyncQueueModel>(AppConstants.syncQueueBox);
   
   runApp(const ProviderScope(child: MyApp()));
 }

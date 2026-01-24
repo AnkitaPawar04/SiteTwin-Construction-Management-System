@@ -1,16 +1,50 @@
-class MaterialRequestModel {
+import 'package:hive/hive.dart';
+
+part 'material_request_model.g.dart';
+
+@HiveType(typeId: 6)
+class MaterialRequestModel extends HiveObject {
+  @HiveField(0)
   final int id;
+  
+  @HiveField(1)
   final int projectId;
+  
+  @HiveField(2)
   final int requestedBy;
+  
+  @HiveField(3)
   final String status;
+  
+  @HiveField(4)
   final String? description;
+  
+  @HiveField(5)
   final String? approvedBy;
+  
+  @HiveField(6)
   final String? approvedAt;
+  
+  @HiveField(7)
   final String createdAt;
+  
+  @HiveField(8)
   final String updatedAt;
+  
+  @HiveField(9)
   final String? projectName;
+  
+  @HiveField(10)
   final String? requestedByName;
+  
+  @HiveField(11)
   final List<MaterialRequestItemModel> items;
+  
+  @HiveField(12)
+  final bool isSynced;
+  
+  @HiveField(13)
+  final String? localId; // UUID for offline records
   
   // Alias for createdAt for convenience
   String get requestDate => createdAt;
@@ -28,6 +62,8 @@ class MaterialRequestModel {
     this.projectName,
     this.requestedByName,
     this.items = const [],
+    this.isSynced = true,
+    this.localId,
   });
 
   factory MaterialRequestModel.fromJson(Map<String, dynamic> json) {
@@ -48,6 +84,8 @@ class MaterialRequestModel {
               .map((item) => MaterialRequestItemModel.fromJson(item as Map<String, dynamic>))
               .toList()
           : [],
+      isSynced: json['is_synced'] as bool? ?? true,
+      localId: json['local_id']?.toString(),
     );
   }
 
@@ -72,16 +110,64 @@ class MaterialRequestModel {
       'project_name': projectName,
       'requested_by_name': requestedByName,
       'items': items.map((item) => item.toJson()).toList(),
+      'is_synced': isSynced,
+      'local_id': localId,
     };
+  }
+
+  MaterialRequestModel copyWith({
+    int? id,
+    int? projectId,
+    int? requestedBy,
+    String? status,
+    String? description,
+    String? approvedBy,
+    String? approvedAt,
+    String? createdAt,
+    String? updatedAt,
+    String? projectName,
+    String? requestedByName,
+    List<MaterialRequestItemModel>? items,
+    bool? isSynced,
+    String? localId,
+  }) {
+    return MaterialRequestModel(
+      id: id ?? this.id,
+      projectId: projectId ?? this.projectId,
+      requestedBy: requestedBy ?? this.requestedBy,
+      status: status ?? this.status,
+      description: description ?? this.description,
+      approvedBy: approvedBy ?? this.approvedBy,
+      approvedAt: approvedAt ?? this.approvedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      projectName: projectName ?? this.projectName,
+      requestedByName: requestedByName ?? this.requestedByName,
+      items: items ?? this.items,
+      isSynced: isSynced ?? this.isSynced,
+      localId: localId ?? this.localId,
+    );
   }
 }
 
+@HiveType(typeId: 7)
 class MaterialRequestItemModel {
+  @HiveField(0)
   final int id;
+  
+  @HiveField(1)
   final int materialRequestId;
+  
+  @HiveField(2)
   final int materialId;
+  
+  @HiveField(3)
   final int quantity;
+  
+  @HiveField(4)
   final String? materialName;
+  
+  @HiveField(5)
   final String? unit;
 
   MaterialRequestItemModel({
