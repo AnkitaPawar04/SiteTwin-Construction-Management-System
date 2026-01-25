@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             InvoiceSeeder::class,
             NotificationSeeder::class,
             ContractorSeeder::class,
+            ToolSeeder::class, // Tool library
             FlatCostingDataSeeder::class,
             ConsumptionVarianceSeeder::class,
             ComprehensiveDataSeeder::class, // New comprehensive seeder

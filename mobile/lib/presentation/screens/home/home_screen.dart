@@ -50,13 +50,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         AttendanceScreen(),
       ];
     } 
-    // Site Engineer: Dashboard, Attendance, Material Requests, Tasks
+    // Site Engineer: Dashboard, Attendance, Material Requests, Tasks, Tools
     else if (role == 'engineer' || role == 'site_engineer') {
       return const [
         DashboardScreen(),
         AttendanceScreen(),
         MaterialRequestListScreen(),
         TaskScreen(),
+        ToolLibraryScreen(),
       ];
     }
     // Purchase Manager: Dashboard, Material Requests, Stock
@@ -136,6 +137,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         case 1: return loc.attendance;
         case 2: return loc.materialRequests;
         case 3: return loc.tasks;
+        case 4: return 'Tools';
         default: return loc.dashboard;
       }
     }
@@ -756,7 +758,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
     
-    // Site Engineer: Dashboard, Attendance, Material Requests, Tasks
+    // Site Engineer: Dashboard, Attendance, Material Requests, Tasks, Tools
     else if (user.role == 'engineer' || user.role == 'site_engineer') {
       return BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -778,6 +780,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.task_alt),
             label: loc.tasks,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.build_circle),
+            label: 'Tools',
           ),
         ],
       );
