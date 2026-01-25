@@ -24,7 +24,9 @@ import 'package:mobile/presentation/screens/compliance/face_recall_attendance_sc
 import 'package:mobile/presentation/screens/compliance/tool_library_screen.dart';
 import 'package:mobile/presentation/screens/compliance/otp_permit_screen.dart';
 import 'package:mobile/presentation/screens/compliance/request_permit_screen.dart';
-import 'package:mobile/presentation/screens/compliance/petty_cash_wallet_screen.dart';
+import 'package:mobile/presentation/screens/petty_cash/submit_expense_screen.dart';
+import 'package:mobile/presentation/screens/petty_cash/my_expenses_screen.dart';
+import 'package:mobile/presentation/screens/petty_cash/review_expenses_screen.dart';
 import 'package:mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:mobile/presentation/screens/settings/settings_screen.dart';
 import 'package:mobile/presentation/widgets/connection_indicator.dart';
@@ -607,20 +609,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
           
-          // Petty Cash Wallet - All roles
-          ListTile(
-            leading: const Icon(Icons.account_balance_wallet),
-            title: const Text('Petty Cash Wallet'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PettyCashWalletScreen(),
-                ),
-              );
-            },
-          ),
+          // Petty Cash - Submit Expense (Workers only)
+          if (user.role == 'worker')
+            ListTile(
+              leading: const Icon(Icons.attach_money),
+              title: const Text('Submit Expense'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SubmitExpenseScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Petty Cash - My Expenses (Workers only)
+          if (user.role == 'worker')
+            ListTile(
+              leading: const Icon(Icons.receipt),
+              title: const Text('My Expenses'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MyExpensesScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Petty Cash - Review Expenses (Managers, Supervisors, Owners)
+          if (user.role == 'manager' || user.role == 'project_manager' || user.role == 'supervisor' || user.role == 'owner')
+            ListTile(
+              leading: const Icon(Icons.receipt_long),
+              title: const Text('Petty Cash Expenses'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReviewExpensesScreen(),
+                  ),
+                );
+              },
+            ),
           
           const Divider(),
           

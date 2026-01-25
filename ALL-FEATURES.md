@@ -1,0 +1,95 @@
+## 👷 **Worker – Features**
+
+* Login / Logout
+* View assigned projects
+* **GPS-based check-in & check-out attendance**
+* View own attendance history
+* View assigned tasks
+* Update task status (Pending → In Progress → Completed)
+* Submit **Daily Progress Report (DPR)**
+
+  * Work description
+  * Photos
+  * GPS location
+* Offline save & auto-sync when internet returns
+* View notifications (task assigned, DPR status)
+
+---
+
+## 🧑‍🔧 **Engineer – Features**
+
+* Login / Logout
+* View assigned projects
+* **GPS-based check-in & check-out attendance**
+* View own attendance history
+* View tasks (assigned or project-level)
+* Update task status (if assigned)
+* Submit **DPR** with photos & GPS
+* **Create material requests** (quantity, unit)
+* View material request status
+* Offline support for all above actions
+* View notifications
+
+---
+
+## 👨‍💼 **Manager – Features**
+
+* Login / Logout
+* View assigned projects
+* **Assign tasks** to workers
+* View all tasks and their statuses
+* **Approve / reject DPRs**
+* **Approve / reject material requests** (final approval)
+* View attendance summary (team-level)
+* View **stock & inventory** (read-only or controlled edits)
+* View project progress dashboard
+* Receive approval-related notifications
+
+---
+
+## 💼 **Purchase Manager – Features**
+
+* Login / Logout
+* View all projects
+* **Review material requests** (mark as reviewed)
+* **Create Purchase Orders** from material requests
+* **Vendor management**
+  * Select vendors
+  * Manage vendor details
+* **GST-compliant procurement**
+  * Separate GST/Non-GST items
+  * Cannot mix GST types in same PO
+* **Upload vendor invoices** (image/PDF)
+* **PO status management**
+  * Created → Approved → Delivered → Closed
+* **Stock management**
+  * View real-time inventory
+  * Trigger stock-in (auto on PO approval + invoice)
+  * Monitor stock levels
+* **Procurement analytics**
+  * View purchase history
+  * Track vendor performance
+* View notifications (material requests, PO updates)
+
+---
+
+## 🧑‍💼 **Owner – Features**
+
+* Login / Logout
+* View **all projects**
+* **Single-screen dashboard**:
+
+  * Project progress
+  * Time vs cost
+  * Attendance utilization
+  * Material consumption
+* View **GST invoices & financial summaries**
+* Download / view reports
+* Read-only access (no field actions)
+
+---
+
+## 🔑 Golden Rule (Important)
+
+> **Only field staff (Workers & Engineers) perform attendance and DPR entry.
+> Managers approve. Owners monitor.**
