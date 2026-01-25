@@ -870,9 +870,21 @@ class _UnitsListDialogState extends ConsumerState<_UnitsListDialog> {
     final unitNumber = unit['unit_number'] ?? 'N/A';
     final unitType = unit['unit_type'] ?? 'N/A';
     final floorArea = unit['floor_area'];
+    
+    // Safe type conversion helper
+    double? toDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value);
+      return null;
+    }
+    
+    final costPerSqft = toDouble(unit['cost_per_sqft']);
+    final unitCost = toDouble(unit['unit_cost']);
     final isSold = unit['is_sold'] == true || unit['is_sold'] == 1;
     final buyerName = unit['buyer_name'];
-    final salePrice = unit['sale_price'];
+    final salePrice = toDouble(unit['sold_price']);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -935,6 +947,62 @@ class _UnitsListDialogState extends ConsumerState<_UnitsListDialog> {
                   ),
                 ],
               ),
+
+            // Unit Cost
+            if (unitCost != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calculate, size: 16, color: Colors.blue[700]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Unit Construction Cost',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            NumberFormat.currency(
+                              locale: 'en_IN',
+                              symbol: '₹',
+                              decimalDigits: 0,
+                            ).format(unitCost),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.blue[900],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (costPerSqft != null)
+                            Text(
+                              '@₹${costPerSqft.toStringAsFixed(2)}/sq.ft',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             // Buyer Name (for sold units)
             if (isSold && buyerName != null) ...[

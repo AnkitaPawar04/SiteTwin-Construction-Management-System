@@ -183,14 +183,43 @@ class CostingService
             ];
         }
 
-        // Equal distribution: Cost per Flat = Total Cost / Total Flats
+        // Calculate total area of all flats
+        $totalArea = $units->sum('floor_area');
+
+        if ($totalArea <= 0) {
+            return [
+                'project_id' => $projectId,
+                'project_name' => $project->name,
+                'total_project_cost' => round($projectCost['grand_total_cost'], 2),
+                'material_cost' => $projectCost['material_cost'],
+                'labor_cost' => $projectCost['labor_cost'],
+                'misc_cost' => $projectCost['misc_cost'],
+                'total_flats' => $totalFlats,
+                'total_area' => 0,
+                'cost_per_sqft' => 0,
+                'sold_flats' => 0,
+                'unsold_flats' => $totalFlats,
+                'cost_allocated_sold' => 0,
+                'inventory_value_unsold' => 0,
+                'message' => 'No area data available for flats',
+            ];
+        }
+
+        // Equal distribution per flat: Cost per Flat = Total Cost / Total Flats
         $costPerFlat = $projectCost['grand_total_cost'] / $totalFlats;
 
         // Count sold and unsold flats
-        $soldFlats = $units->where('is_sold', true)->count();
+        $soldUnits = $units->where('is_sold', true);
+        $unsoldUnits = $units->where('is_sold', false);
+        
+        $soldFlats = $soldUnits->count();
         $unsoldFlats = $totalFlats - $soldFlats;
 
-        // Allocate cost to sold vs unsold
+        // Calculate areas
+        $soldArea = $soldUnits->sum('floor_area');
+        $unsoldArea = $unsoldUnits->sum('floor_area');
+
+        // Allocate cost based on flat count (equal cost per flat)
         $costAllocatedSold = $soldFlats * $costPerFlat;
         $inventoryValueUnsold = $unsoldFlats * $costPerFlat;
 
@@ -202,9 +231,12 @@ class CostingService
             'labor_cost' => $projectCost['labor_cost'],
             'misc_cost' => $projectCost['misc_cost'],
             'total_flats' => $totalFlats,
+            'total_area' => round($totalArea, 2),
             'cost_per_flat' => round($costPerFlat, 2),
             'sold_flats' => $soldFlats,
             'unsold_flats' => $unsoldFlats,
+            'sold_area' => round($soldArea, 2),
+            'unsold_area' => round($unsoldArea, 2),
             'cost_allocated_sold' => round($costAllocatedSold, 2),
             'inventory_value_unsold' => round($inventoryValueUnsold, 2),
         ];
@@ -229,12 +261,22 @@ class CostingService
 
         $units = $query->orderBy('unit_number')->get();
 
-        return $units->map(function ($unit) {
+        // Get cost per flat for this project
+        $flatCosting = $this->calculateFlatCosting($projectId);
+        $costPerFlat = $flatCosting['cost_per_flat'] ?? 0;
+
+        return $units->map(function ($unit) use ($costPerFlat) {
+            // Each flat gets equal cost, cost per sqft = cost per flat / area
+            $unitCost = $costPerFlat;
+            $costPerSqft = $unit->floor_area > 0 ? $costPerFlat / $unit->floor_area : 0;
+            
             return [
                 'unit_id' => $unit->id,
                 'unit_number' => $unit->unit_number,
                 'unit_type' => $unit->unit_type,
                 'floor_area' => $unit->floor_area,
+                'cost_per_sqft' => round($costPerSqft, 2),
+                'unit_cost' => round($unitCost, 2),
                 'is_sold' => $unit->is_sold,
                 'sold_price' => $unit->sold_price,
                 'sold_date' => $unit->sold_date?->format('Y-m-d'),
