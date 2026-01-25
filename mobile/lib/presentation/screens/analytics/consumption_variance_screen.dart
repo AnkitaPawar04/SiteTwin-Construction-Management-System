@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/project_cost_model.dart';
+import '../../../providers/providers.dart';
 
-class ConsumptionVarianceScreen extends StatefulWidget {
-  const ConsumptionVarianceScreen({super.key});
+class ConsumptionVarianceScreen extends ConsumerStatefulWidget {
+  final int? projectId;
+  
+  const ConsumptionVarianceScreen({super.key, this.projectId});
 
   @override
-  State<ConsumptionVarianceScreen> createState() => _ConsumptionVarianceScreenState();
+  ConsumerState<ConsumptionVarianceScreen> createState() => _ConsumptionVarianceScreenState();
 }
 
-class _ConsumptionVarianceScreenState extends State<ConsumptionVarianceScreen> {
+class _ConsumptionVarianceScreenState extends ConsumerState<ConsumptionVarianceScreen> {
   final NumberFormat _numberFormat = NumberFormat('#,##0.00');
   final NumberFormat _currencyFormat = NumberFormat.currency(symbol: '₹', decimalDigits: 2);
   
   int? _selectedProjectId;
   List<ConsumptionVarianceModel> _variances = [];
+  List<Map<String, dynamic>> _projects = [];
   String _filterType = 'ALL'; // ALL, WASTAGE, SAVINGS, HIGH_VARIANCE
   bool _isLoading = false;
   String? _error;
@@ -22,23 +27,109 @@ class _ConsumptionVarianceScreenState extends State<ConsumptionVarianceScreen> {
   @override
   void initState() {
     super.initState();
-    _loadVarianceData();
+    _selectedProjectId = widget.projectId;
+    _loadProjects();
+    if (_selectedProjectId != null) {
+      _loadVarianceData();
+    }
+  }
+  
+  Future<void> _loadProjects() async {
+    try {
+      final projectRepository = ref.read(projectRepositoryProvider);
+      final projects = await projectRepository.getAllProjects();
+      setState(() {
+        _projects = projects.map((p) => {'id': p.id, 'name': p.name}).toList();
+        if (_projects.isNotEmpty && _selectedProjectId == null) {
+          _selectedProjectId = _projects.first['id'] as int;
+          _loadVarianceData();
+        }
+      });
+    } catch (e) {
+      // Silently fail, user can still manually select if needed
+    }
   }
 
   Future<void> _loadVarianceData() async {
+    final projectId = widget.projectId ?? _selectedProjectId;
+    
+    if (projectId == null) {
+      setState(() {
+        _variances = [];
+        _isLoading = false;
+        _error = null;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      // TODO: Replace with actual API call
-      // final data = await varianceRepository.getConsumptionVariance(_selectedProjectId);
+      final varianceRepository = ref.read(varianceRepositoryProvider);
+      final projectRepository = ref.read(projectRepositoryProvider);
       
-      await Future.delayed(const Duration(milliseconds: 500));
+      final report = await varianceRepository.getProjectVarianceReport(projectId);
+      
+      // Get project name
+      String projectName = 'Project';
+      try {
+        final project = _projects.firstWhere((p) => p['id'] == projectId);
+        projectName = project['name'] as String;
+      } catch (e) {
+        // Project name not found in cache, use default
+      }
+      
+      final variances = (report['variances'] as List<dynamic>?)?.map((item) {
+        final data = item as Map<String, dynamic>;
+        
+        // Helper function to safely parse numeric values
+        double parseDouble(dynamic value) {
+          if (value == null) return 0.0;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value) ?? 0.0;
+          return 0.0;
+        }
+        
+        // Determine variance type
+        String varianceType = 'NORMAL';
+        final alertStatus = data['alert_status'] as String?;
+        final variance = parseDouble(data['variance']);
+        
+        if (alertStatus == 'EXCEEDED') {
+          varianceType = 'WASTAGE';
+        } else if (variance < 0) {
+          varianceType = 'SAVINGS';
+        }
+        
+        // Calculate costs (simplified - using standard quantity as proxy)
+        final standardQty = parseDouble(data['standard_quantity']);
+        final actualQty = parseDouble(data['actual_consumption']);
+        final variancePercentage = parseDouble(data['variance_percentage']);
+        final unitCost = 100.0; // Simplified - actual cost should come from material master
+        
+        return {
+          'project_id': projectId,
+          'project_name': projectName,
+          'material_id': data['material_id'],
+          'material_name': data['material_name'] ?? 'Unknown',
+          'unit': data['unit'] ?? 'units',
+          'theoretical_quantity': standardQty,
+          'actual_quantity': actualQty,
+          'variance_quantity': variance,
+          'variance_percentage': variancePercentage,
+          'variance_type': varianceType,
+          'theoretical_cost': standardQty * unitCost,
+          'actual_cost': actualQty * unitCost,
+          'cost_variance': variance * unitCost,
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+      }).toList() ?? [];
       
       setState(() {
-        _variances = [];
+        _variances = variances.map((e) => ConsumptionVarianceModel.fromJson(e)).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -78,6 +169,36 @@ class _ConsumptionVarianceScreenState extends State<ConsumptionVarianceScreen> {
       ),
       body: Column(
         children: [
+          // Project Selector
+          if (_projects.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: DropdownButtonFormField<int>(
+                value: _selectedProjectId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Select Project',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                items: _projects.map((project) {
+                  return DropdownMenuItem(
+                    value: project['id'] as int,
+                    child: Text(
+                      project['name'] as String,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedProjectId = value;
+                  });
+                  _loadVarianceData();
+                },
+              ),
+            ),
+          
           // Filter Chips
           Container(
             padding: const EdgeInsets.all(16),

@@ -25,6 +25,7 @@ import 'package:mobile/data/repositories/purchase_order_repository.dart';
 import 'package:mobile/data/repositories/tool_repository.dart';
 import 'package:mobile/data/repositories/costing_repository.dart';
 import 'package:mobile/data/repositories/contractor_repository.dart';
+import 'package:mobile/data/repositories/variance_repository.dart';
 import 'package:mobile/data/services/sync_queue_service.dart';
 
 // Core Providers
@@ -148,6 +149,13 @@ final costingRepositoryProvider = Provider<CostingRepository>((ref) {
 
 final contractorRepositoryProvider = Provider<ContractorRepository>((ref) {
   return ContractorRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(networkInfoProvider),
+  );
+});
+
+final varianceRepositoryProvider = Provider<VarianceRepository>((ref) {
+  return VarianceRepository(
     ref.watch(apiClientProvider),
     ref.watch(networkInfoProvider),
   );

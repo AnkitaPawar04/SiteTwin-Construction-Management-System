@@ -66,4 +66,8 @@ class ApiConstants {
   static const String contractorRatings = '/contractor-ratings';
   static const String tradeHistory = '/trades/{id}/history';
   static const String projectContractorRatings = '/projects/{id}/contractor-ratings';
+  
+  // Consumption Variance
+  static const String varianceReport = '/costing/project/{projectId}/variance';
+  static const String materialVariance = '/costing/project/{projectId}/material/{materialId}/variance';
 }
