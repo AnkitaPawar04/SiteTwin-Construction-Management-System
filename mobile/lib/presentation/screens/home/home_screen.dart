@@ -9,6 +9,9 @@ import 'package:mobile/presentation/screens/dpr/dpr_list_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_list_screen.dart';
 import 'package:mobile/presentation/screens/material_request/material_request_create_screen.dart';
 import 'package:mobile/presentation/screens/dashboard/dashboard_screen.dart';
+import 'package:mobile/presentation/screens/dashboard/purchase_manager_dashboard_screen.dart';
+import 'package:mobile/presentation/screens/dashboard/supervisor_dashboard_screen.dart';
+import 'package:mobile/presentation/screens/dashboard/safety_officer_dashboard_screen.dart';
 import 'package:mobile/presentation/screens/projects/projects_screen.dart';
 import 'package:mobile/presentation/screens/inventory/stock_inventory_screen.dart';
 import 'package:mobile/presentation/screens/stock/stock_in_screen.dart';
@@ -63,12 +66,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ToolLibraryScreen(),
       ];
     }
-    // Purchase Manager: Dashboard, Material Requests, Stock
+    // Purchase Manager: Purchase Manager Dashboard, Material Requests, Stock
     else if (role == 'purchase_manager') {
       return const [
-        DashboardScreen(),
+        PurchaseManagerDashboardScreen(),
         MaterialRequestListScreen(),
         StockInventoryScreen(),
+      ];
+    }
+    // Supervisor: Supervisor Dashboard, Tasks
+    else if (role == 'supervisor') {
+      return const [
+        SupervisorDashboardScreen(),
+        TaskScreen(),
       ];
     }
     // Project Manager: Dashboard, Tasks, DPR Review
@@ -79,10 +89,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         DprListScreen(),
       ];
     }
-    // Safety Officer: Dashboard, Attendance
+    // Safety Officer: Safety Officer Dashboard, Attendance
     else if (role == 'safety_officer') {
       return const [
-        DashboardScreen(),
+        SafetyOfficerDashboardScreen(),
         AllUsersAttendanceScreen(),
       ];
     }
