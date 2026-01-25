@@ -54,6 +54,24 @@ class UserSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $this->command->info('Created 5 users: 1 Owner, 1 Manager, 1 Engineer, 1 Worker, 1 Purchase Manager');
+        // Safety Officer
+        User::create([
+            'name' => 'Suresh Verma',
+            'phone' => '9876543216',
+            'role' => 'safety_officer',
+            'language' => 'en',
+            'is_active' => true,
+        ]);
+
+        // Supervisor
+        User::create([
+            'name' => 'Ramesh Singh',
+            'phone' => '9876543217',
+            'role' => 'supervisor',
+            'language' => 'en',
+            'is_active' => true,
+        ]);
+
+        $this->command->info('Created 7 users: 1 Owner, 1 Manager, 1 Engineer, 1 Worker, 1 Purchase Manager, 1 Safety Officer, 1 Supervisor');
     }
 }

@@ -12,35 +12,45 @@ class PermitToWork extends Model
 
     protected $table = 'permit_to_work';
 
+    const TASK_HEIGHT = 'HEIGHT';
+    const TASK_ELECTRICAL = 'ELECTRICAL';
+    const TASK_WELDING = 'WELDING';
+    const TASK_CONFINED_SPACE = 'CONFINED_SPACE';
+    const TASK_HOT_WORK = 'HOT_WORK';
+    const TASK_EXCAVATION = 'EXCAVATION';
+
+    const STATUS_PENDING = 'PENDING';
+    const STATUS_APPROVED = 'APPROVED';
+    const STATUS_IN_PROGRESS = 'IN_PROGRESS';
+    const STATUS_COMPLETED = 'COMPLETED';
+    const STATUS_REJECTED = 'REJECTED';
+
+    const FIXED_OTP = '123456'; // MVP fixed OTP
+
     protected $fillable = [
         'project_id',
-        'task_description',
-        'risk_level',
-        'requested_by',
-        'requested_at',
-        'safety_officer_id',
-        'otp_code',
-        'otp_generated_at',
-        'otp_expires_at',
-        'approved_at',
-        'work_started_at',
-        'work_completed_at',
-        'completed_by',
-        'status',
+        'task_type',
+        'description',
         'safety_measures',
+        'supervisor_id',
+        'requested_at',
+        'approved_by',
+        'otp_code',
+        'approved_at',
+        'started_at',
+        'completed_at',
+        'status',
+        'notes',
         'rejection_reason',
-        'completion_notes',
     ];
 
     protected function casts(): array
     {
         return [
             'requested_at' => 'datetime',
-            'otp_generated_at' => 'datetime',
-            'otp_expires_at' => 'datetime',
             'approved_at' => 'datetime',
-            'work_started_at' => 'datetime',
-            'work_completed_at' => 'datetime',
+            'started_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
     }
 
@@ -50,67 +60,49 @@ class PermitToWork extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function requestedBy()
+    public function supervisor()
     {
-        return $this->belongsTo(User::class, 'requested_by');
+        return $this->belongsTo(User::class, 'supervisor_id');
     }
 
-    public function safetyOfficer()
+    public function approver()
     {
-        return $this->belongsTo(User::class, 'safety_officer_id');
-    }
-
-    public function completedBy()
-    {
-        return $this->belongsTo(User::class, 'completed_by');
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     // Helper methods
-    public function generateOTP(): string
-    {
-        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        
-        $this->update([
-            'otp_code' => $otp,
-            'otp_generated_at' => Carbon::now(),
-            'otp_expires_at' => Carbon::now()->addMinutes(15),
-            'status' => 'OTP_SENT',
-        ]);
-
-        return $otp;
-    }
-
     public function verifyOTP(string $otp): bool
     {
-        if ($this->otp_code !== $otp) {
-            return false;
-        }
-
-        if (Carbon::now()->isAfter($this->otp_expires_at)) {
-            $this->update(['status' => 'EXPIRED']);
-            return false;
-        }
-
-        $this->update([
-            'approved_at' => Carbon::now(),
-            'status' => 'APPROVED',
-        ]);
-
-        return true;
+        return $this->otp_code === $otp;
     }
 
-    public function isExpired(): bool
+    public function isPending(): bool
     {
-        return $this->otp_expires_at && Carbon::now()->isAfter($this->otp_expires_at);
+        return $this->status === self::STATUS_PENDING;
     }
 
     public function isApproved(): bool
     {
-        return $this->status === 'APPROVED';
+        return $this->status === self::STATUS_APPROVED;
     }
 
-    public function isCriticalRisk(): bool
+    public function isInProgress(): bool
     {
-        return in_array($this->risk_level, ['HIGH', 'CRITICAL']);
+        return $this->status === self::STATUS_IN_PROGRESS;
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
+    public function canStartWork(): bool
+    {
+        return $this->status === self::STATUS_APPROVED;
+    }
+
+    public function isExpired(): bool
+    {
+        return false; // No expiry for fixed OTP
     }
 }

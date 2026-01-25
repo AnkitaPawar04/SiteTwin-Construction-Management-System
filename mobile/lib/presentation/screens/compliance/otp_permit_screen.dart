@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../data/models/compliance_models.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../data/repositories/permit_repository.dart';
+import '../../../providers/providers.dart';
 
-class OTPPermitScreen extends StatefulWidget {
+class OTPPermitScreen extends ConsumerStatefulWidget {
   const OTPPermitScreen({super.key});
 
   @override
-  State<OTPPermitScreen> createState() => _OTPPermitScreenState();
+  ConsumerState<OTPPermitScreen> createState() => _OTPPermitScreenState();
 }
 
-class _OTPPermitScreenState extends State<OTPPermitScreen> {
-  List<OTPPermitModel> _permits = [];
-  String _filterStatus = 'ALL'; // ALL, PENDING, APPROVED, REJECTED
+class _OTPPermitScreenState extends ConsumerState<OTPPermitScreen> {
+  List<Map<String, dynamic>> _permits = [];
+  String _filterStatus = 'ALL'; // ALL, PENDING, APPROVED, IN_PROGRESS, COMPLETED, REJECTED
   bool _isLoading = false;
   String? _error;
 
@@ -27,13 +30,11 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
     });
 
     try {
-      // TODO: Replace with actual API call
-      // final data = await permitRepository.getOTPPermits();
-      
-      await Future.delayed(const Duration(milliseconds: 500));
+      final repository = ref.read(permitRepositoryProvider);
+      final data = await repository.getPermits();
       
       setState(() {
-        _permits = [];
+        _permits = data;
         _isLoading = false;
       });
     } catch (e) {
@@ -44,21 +45,36 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
     }
   }
 
-  List<OTPPermitModel> get _filteredPermits {
+  List<Map<String, dynamic>> get _filteredPermits {
     if (_filterStatus == 'ALL') return _permits;
-    return _permits.where((p) => p.status == _filterStatus).toList();
+    return _permits.where((p) => p['status'] == _filterStatus).toList();
   }
 
   Map<String, int> get _statusCounts {
     return {
-      'PENDING': _permits.where((p) => p.isPending).length,
-      'APPROVED': _permits.where((p) => p.isApproved).length,
-      'REJECTED': _permits.where((p) => p.status == 'REJECTED').length,
+      'PENDING': _permits.where((p) => p['status'] == 'PENDING').length,
+      'APPROVED': _permits.where((p) => p['status'] == 'APPROVED').length,
+      'IN_PROGRESS': _permits.where((p) => p['status'] == 'IN_PROGRESS').length,
+      'COMPLETED': _permits.where((p) => p['status'] == 'COMPLETED').length,
+      'REJECTED': _permits.where((p) => p['status'] == 'REJECTED').length,
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.value;
+    
+    // User should not be null
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    final isSupervisor = user.role == 'supervisor';
+    final isSafetyOfficer = user.role == 'safety_officer';
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('OTP Permit-to-Work'),
@@ -106,6 +122,24 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                   ),
                   const SizedBox(width: 8),
                   ChoiceChip(
+                    label: Text('In Progress (${_statusCounts['IN_PROGRESS']})'),
+                    selected: _filterStatus == 'IN_PROGRESS',
+                    avatar: const Icon(Icons.play_arrow, size: 16),
+                    onSelected: (selected) {
+                      setState(() => _filterStatus = 'IN_PROGRESS');
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text('Completed (${_statusCounts['COMPLETED']})'),
+                    selected: _filterStatus == 'COMPLETED',
+                    avatar: const Icon(Icons.done_all, size: 16),
+                    onSelected: (selected) {
+                      setState(() => _filterStatus = 'COMPLETED');
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
                     label: Text('Rejected (${_statusCounts['REJECTED']})'),
                     selected: _filterStatus == 'REJECTED',
                     avatar: const Icon(Icons.cancel, size: 16),
@@ -120,11 +154,6 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
           
           Expanded(child: _buildBody()),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createPermit,
-        icon: const Icon(Icons.add),
-        label: const Text('Request Permit'),
       ),
     );
   }
@@ -198,28 +227,40 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
     );
   }
 
-  Widget _buildPermitCard(OTPPermitModel permit) {
+  Widget _buildPermitCard(Map<String, dynamic> permit) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.value;
+    final isSafetyOfficer = user?.role == 'safety_officer';
+    final isSupervisor = user?.role == 'supervisor';
+    
+    final status = permit['status'] as String;
+    final taskType = permit['task_type'] as String;
+    final project = permit['project'] as Map<String, dynamic>?;
+    final supervisor = permit['supervisor'] as Map<String, dynamic>?;
+    
     MaterialColor statusColor = Colors.grey;
     IconData statusIcon = Icons.pending;
     
-    if (permit.isApproved) {
-      statusColor = Colors.green;
-      statusIcon = Icons.check_circle;
-    } else if (permit.status == 'REJECTED') {
-      statusColor = Colors.red;
-      statusIcon = Icons.cancel;
-    } else if (permit.isPending) {
-      statusColor = Colors.orange;
-      statusIcon = Icons.pending;
-    }
-
-    MaterialColor hazardColor = Colors.blue;
-    if (permit.hazardLevel == 'CRITICAL') {
-      hazardColor = Colors.red;
-    } else if (permit.hazardLevel == 'HIGH') {
-      hazardColor = Colors.orange;
-    } else if (permit.hazardLevel == 'MEDIUM') {
-      hazardColor = Colors.yellow;
+    switch (status) {
+      case 'APPROVED':
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle;
+        break;
+      case 'IN_PROGRESS':
+        statusColor = Colors.blue;
+        statusIcon = Icons.play_arrow;
+        break;
+      case 'COMPLETED':
+        statusColor = Colors.teal;
+        statusIcon = Icons.done_all;
+        break;
+      case 'REJECTED':
+        statusColor = Colors.red;
+        statusIcon = Icons.cancel;
+        break;
+      default:
+        statusColor = Colors.orange;
+        statusIcon = Icons.pending;
     }
 
     return Card(
@@ -248,7 +289,7 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          permit.permitNumber,
+                          'Permit #${permit['id']}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -256,7 +297,7 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          permit.workerName,
+                          supervisor?['name'] ?? 'Unknown',
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 13,
@@ -272,7 +313,7 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      permit.status,
+                      status,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -287,7 +328,7 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
               const Divider(height: 1),
               const SizedBox(height: 12),
               
-              // Work Type & Hazard Level
+              // Task Type & Project
               Row(
                 children: [
                   Expanded(
@@ -295,7 +336,7 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Work Type',
+                          'Task Type',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade600,
@@ -303,7 +344,7 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          permit.workType,
+                          taskType.replaceAll('_', ' '),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -317,27 +358,21 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Hazard Level',
+                          'Project',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade600,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: hazardColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(6),
+                        Text(
+                          project?['name'] ?? 'Unknown',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
                           ),
-                          child: Text(
-                            permit.hazardLevel,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: hazardColor[700]!,
-                            ),
-                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -347,73 +382,80 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
               
               const SizedBox(height: 12),
               
-              // Location
-              Row(
-                children: [
-                  Icon(Icons.location_on, size: 14, color: Colors.grey.shade600),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      permit.location,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                ],
+              // Description
+              Text(
+                'Description',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                permit['description'] ?? '',
+                style: const TextStyle(fontSize: 13),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               
-              if (permit.isOTPVerified) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.verified, size: 18, color: Colors.green[700]!),
-                      const SizedBox(width: 8),
-                      Text(
-                        'OTP Verified by ${permit.safetyOfficerName}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green[700]!,
+              // Approve/Reject buttons for Safety Officer on PENDING permits
+              if (isSafetyOfficer && status == 'PENDING') ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _approvePermit(permit['id']),
+                        icon: const Icon(Icons.check_circle),
+                        label: const Text('Approve'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _rejectPermit(permit['id']),
+                        icon: const Icon(Icons.cancel),
+                        label: const Text('Reject'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              
+              // Verify OTP button for Supervisor on APPROVED permits
+              if (isSupervisor && status == 'APPROVED') ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _verifyOTP(permit['id']),
+                  icon: const Icon(Icons.vpn_key),
+                  label: const Text('Enter OTP & Start Work'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 40),
                   ),
                 ),
               ],
               
-              if (permit.isCriticalHazard && !permit.isOTPVerified) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning, size: 18, color: Colors.red[700]!),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Safety Officer verification required',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.red[700]!,
-                          ),
-                        ),
-                      ),
-                    ],
+              // Complete Work button for Supervisor on IN_PROGRESS permits
+              if (isSupervisor && status == 'IN_PROGRESS') ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _completeWork(permit['id']),
+                  icon: const Icon(Icons.done_all),
+                  label: const Text('Complete Work'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 40),
                   ),
                 ),
               ],
@@ -424,7 +466,11 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
     );
   }
 
-  void _showPermitDetails(OTPPermitModel permit) {
+  void _showPermitDetails(Map<String, dynamic> permit) {
+    final project = permit['project'] as Map<String, dynamic>?;
+    final supervisor = permit['supervisor'] as Map<String, dynamic>?;
+    final safetyMeasures = (permit['safety_measures'] as String?)?.split('\n') ?? [];
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -466,7 +512,7 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            permit.permitNumber,
+                            'Permit #${permit['id']}',
                             style: TextStyle(
                               color: Colors.grey.shade600,
                               fontSize: 14,
@@ -488,40 +534,31 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
                   controller: scrollController,
                   padding: const EdgeInsets.all(20),
                   children: [
-                    _buildDetailRow('Worker', permit.workerName),
-                    _buildDetailRow('Work Type', permit.workType),
-                    _buildDetailRow('Hazard Level', permit.hazardLevel),
-                    _buildDetailRow('Location', permit.location),
-                    _buildDetailRow('Status', permit.status),
+                    _buildDetailRow('Supervisor', supervisor?['name'] ?? 'Unknown'),
+                    _buildDetailRow('Task Type', (permit['task_type'] as String).replaceAll('_', ' ')),
+                    _buildDetailRow('Project', project?['name'] ?? 'Unknown'),
+                    _buildDetailRow('Status', permit['status'] ?? 'Unknown'),
                     const SizedBox(height: 16),
                     const Text(
-                      'Hazards',
+                      'Description',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    ...permit.hazards.map((h) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning, size: 16, color: Colors.orange[700]!),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(h)),
-                        ],
-                      ),
-                    )),
+                    Text(permit['description'] ?? ''),
                     const SizedBox(height: 16),
                     const Text(
                       'Safety Measures',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    ...permit.safetyMeasures.map((s) => Padding(
+                    ...safetyMeasures.map((s) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.check_circle, size: 16, color: Colors.green[700]!),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(s)),
+                          Expanded(child: Text(s.trim())),
                         ],
                       ),
                     )),
@@ -565,27 +602,195 @@ class _OTPPermitScreenState extends State<OTPPermitScreen> {
     );
   }
 
-  Future<void> _createPermit() async {
-    // TODO: Implement permit creation
-    showDialog(
+  Future<void> _approvePermit(int id) async {
+    try {
+      final repository = ref.read(permitRepositoryProvider);
+      final result = await repository.approvePermit(id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Permit approved! OTP: ${result['data']['otp_code']}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        _loadPermits();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _rejectPermit(int id) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create Permit'),
-        content: const Text(
-          'Permit creation form will include:\n\n'
-          '• Work type selection\n'
-          '• Hazard level assessment\n'
-          '• Location details\n'
-          '• Safety measures checklist\n'
-          '• OTP verification request',
+        title: const Text('Reject Permit'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Rejection Reason *',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Reject'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true && controller.text.trim().isNotEmpty) {
+      try {
+        final repository = ref.read(permitRepositoryProvider);
+        await repository.rejectPermit(id, controller.text.trim());
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Permit rejected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          _loadPermits();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _verifyOTP(int id) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Verify OTP'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter the OTP provided by Safety Officer:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'OTP',
+                border: OutlineInputBorder(),
+                hintText: 'Enter 6-digit OTP',
+              ),
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Verify & Start Work'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && controller.text.trim().isNotEmpty) {
+      try {
+        final repository = ref.read(permitRepositoryProvider);
+        await repository.verifyOTP(id, controller.text.trim());
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ OTP verified! Work started'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _loadPermits();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _completeWork(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Complete Work'),
+        content: const Text('Are you sure the work has been completed safely?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+            child: const Text('Complete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final repository = ref.read(permitRepositoryProvider);
+        await repository.completeWork(id);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Work completed successfully'),
+              backgroundColor: Colors.teal,
+            ),
+          );
+          _loadPermits();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 }

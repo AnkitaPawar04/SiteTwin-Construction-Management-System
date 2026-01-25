@@ -20,7 +20,7 @@ use App\Http\Controllers\Api\CostingController;
 use App\Http\Controllers\Api\ContractorRatingController;
 use App\Http\Controllers\Api\DailyWagerController;
 use App\Http\Controllers\Api\ToolController;
-use App\Http\Controllers\Api\PermitController;
+use App\Http\Controllers\Api\PermitToWorkController;
 use App\Http\Controllers\Api\PettyCashController;
 
 // Public routes
@@ -182,16 +182,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tools/{toolId}/history', [ToolController::class, 'getHistory']);
     Route::post('/tools/checkouts/{checkoutId}/mark-lost', [ToolController::class, 'markAsLost']);
 
-    // Permit-to-Work routes (OTP-based)
-    Route::post('/permits', [PermitController::class, 'store']);
-    Route::post('/permits/{permitId}/generate-otp', [PermitController::class, 'generateOTP']);
-    Route::post('/permits/{permitId}/verify-otp', [PermitController::class, 'verifyOTP']);
-    Route::post('/permits/{permitId}/reject', [PermitController::class, 'reject']);
-    Route::post('/permits/{permitId}/start-work', [PermitController::class, 'startWork']);
-    Route::post('/permits/{permitId}/complete-work', [PermitController::class, 'completeWork']);
-    Route::get('/permits/active', [PermitController::class, 'getActive']);
-    Route::get('/permits/critical-risk', [PermitController::class, 'getCriticalRisk']);
-    Route::get('/permits/statistics', [PermitController::class, 'getStatistics']);
+    // OTP Permit-to-Work routes (Supervisor-based)
+    Route::get('/permits', [PermitToWorkController::class, 'index']);
+    Route::get('/permits/{id}', [PermitToWorkController::class, 'show']);
+    Route::post('/permits/request', [PermitToWorkController::class, 'requestPermit']);
+    Route::post('/permits/{id}/approve', [PermitToWorkController::class, 'approvePermit']);
+    Route::post('/permits/{id}/reject', [PermitToWorkController::class, 'rejectPermit']);
+    Route::post('/permits/{id}/verify-otp', [PermitToWorkController::class, 'verifyOTP']);
+    Route::post('/permits/{id}/complete', [PermitToWorkController::class, 'completeWork']);
+    Route::get('/permits/stats/summary', [PermitToWorkController::class, 'statistics']);
 
     // Petty Cash routes (Geo-tagged)
     Route::post('/petty-cash', [PettyCashController::class, 'store']);

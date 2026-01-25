@@ -16,32 +16,29 @@ return new class extends Migration
         Schema::create('permit_to_work', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
-            $table->string('task_description');
-            $table->enum('risk_level', ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])->default('MEDIUM');
+            $table->enum('task_type', ['HEIGHT', 'ELECTRICAL', 'WELDING', 'CONFINED_SPACE', 'HOT_WORK', 'EXCAVATION'])->comment('Type of high-risk work');
+            $table->text('description')->comment('Detailed description of the work to be performed');
+            $table->text('safety_measures')->comment('Safety measures and equipment to be used');
             
-            // Request details
-            $table->foreignId('requested_by')->constrained('users')->onDelete('cascade');
+            // Supervisor (requests permit)
+            $table->foreignId('supervisor_id')->constrained('users')->onDelete('cascade');
             $table->timestamp('requested_at');
             
             // Safety officer approval
-            $table->foreignId('safety_officer_id')->nullable()->constrained('users')->onDelete('set null');
-            $table->string('otp_code', 6)->nullable();
-            $table->timestamp('otp_generated_at')->nullable();
-            $table->timestamp('otp_expires_at')->nullable();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->string('otp_code', 6)->default('123456')->comment('Fixed OTP for MVP');
             $table->timestamp('approved_at')->nullable();
             
             // Work execution
-            $table->timestamp('work_started_at')->nullable();
-            $table->timestamp('work_completed_at')->nullable();
-            $table->foreignId('completed_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('started_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
             
             // Status
-            $table->enum('status', ['PENDING', 'OTP_SENT', 'APPROVED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'EXPIRED'])->default('PENDING');
+            $table->enum('status', ['PENDING', 'APPROVED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'])->default('PENDING');
             
             // Additional details
-            $table->text('safety_measures')->nullable();
+            $table->text('notes')->nullable();
             $table->text('rejection_reason')->nullable();
-            $table->text('completion_notes')->nullable();
             
             $table->timestamps();
         });

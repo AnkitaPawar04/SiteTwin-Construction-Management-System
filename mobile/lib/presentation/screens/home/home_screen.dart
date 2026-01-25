@@ -23,6 +23,7 @@ import 'package:mobile/presentation/screens/compliance/contractor_rating_screen.
 import 'package:mobile/presentation/screens/compliance/face_recall_attendance_screen.dart';
 import 'package:mobile/presentation/screens/compliance/tool_library_screen.dart';
 import 'package:mobile/presentation/screens/compliance/otp_permit_screen.dart';
+import 'package:mobile/presentation/screens/compliance/request_permit_screen.dart';
 import 'package:mobile/presentation/screens/compliance/petty_cash_wallet_screen.dart';
 import 'package:mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:mobile/presentation/screens/settings/settings_screen.dart';
@@ -574,8 +575,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
           
-          // OTP Permit-to-Work - Worker, Site Engineer, Safety Officer, Project Manager, Owner
-          if (user.role == 'worker' || user.role == 'engineer' || user.role == 'site_engineer' || user.role == 'safety_officer' || user.role == 'manager' || user.role == 'project_manager' || user.role == 'owner')
+          // OTP Permit-to-Work - Supervisor, Safety Officer, Site Engineer, Project Manager, Owner
+          if (user.role == 'supervisor' || user.role == 'safety_officer' || user.role == 'engineer' || user.role == 'site_engineer' || user.role == 'manager' || user.role == 'project_manager' || user.role == 'owner')
             ListTile(
               leading: const Icon(Icons.verified_user),
               title: const Text('OTP Permit-to-Work'),
@@ -585,6 +586,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const OTPPermitScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Request Permit - Supervisor only
+          if (user.role == 'supervisor')
+            ListTile(
+              leading: const Icon(Icons.add_task),
+              title: const Text('Request Permit'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RequestPermitScreen(),
                   ),
                 );
               },

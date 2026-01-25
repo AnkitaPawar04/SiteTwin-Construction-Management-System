@@ -292,6 +292,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           _buildTestCredential('Manager', '9876543211'),
                           _buildTestCredential('Purchase Mgr', '9876543215'),
                           _buildTestCredential('Engineer', '9876543213'),
+                          _buildTestCredential('Safety Officer', '9876543216'),
+                          _buildTestCredential('Supervisor', '9876543217'),
                           _buildTestCredential('Worker', '9876543220'),
                         ],
                       ),
