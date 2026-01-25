@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             StockSeeder::class,
             InvoiceSeeder::class,
             NotificationSeeder::class,
+            ContractorSeeder::class,
         ]);
 
         $this->command->newLine();

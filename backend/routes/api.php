@@ -150,11 +150,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // PHASE 5: Advanced Field & Compliance Features
 
+    // Contractor Management routes
+    Route::get('/contractors', [ContractorRatingController::class, 'index']);
+    Route::post('/contractors', [ContractorRatingController::class, 'storeContractor']);
+    Route::get('/contractors/{contractorId}/trades', [ContractorRatingController::class, 'getTrades']);
+    Route::post('/contractors/{contractorId}/trades', [ContractorRatingController::class, 'addTrade']);
+    Route::get('/contractors/{contractorId}/summary', [ContractorRatingController::class, 'getContractorSummary']);
+    
     // Contractor Rating routes
     Route::post('/contractor-ratings', [ContractorRatingController::class, 'store']);
-    Route::get('/contractors/{contractorId}/ratings', [ContractorRatingController::class, 'getHistory']);
-    Route::get('/contractors/{contractorId}/average-rating', [ContractorRatingController::class, 'getAverageRating']);
-    Route::get('/contractors/needing-attention', [ContractorRatingController::class, 'getNeedingAttention']);
+    Route::get('/trades/{tradeId}/history', [ContractorRatingController::class, 'getTradeHistory']);
+    Route::get('/projects/{projectId}/contractor-ratings', [ContractorRatingController::class, 'getProjectRatings']);
 
     // Daily Wager Attendance routes (Face Recall)
     Route::post('/daily-wagers/check-in', [DailyWagerController::class, 'checkIn']);

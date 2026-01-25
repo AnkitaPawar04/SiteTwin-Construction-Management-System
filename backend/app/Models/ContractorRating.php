@@ -11,16 +11,10 @@ class ContractorRating extends Model
 
     protected $fillable = [
         'contractor_id',
+        'trade_id',
         'project_id',
-        'rating_period_start',
-        'rating_period_end',
-        'punctuality_score',
-        'quality_score',
-        'safety_score',
-        'wastage_score',
-        'overall_rating',
-        'payment_action',
-        'penalty_amount',
+        'speed',
+        'quality',
         'rated_by',
         'comments',
     ];
@@ -28,21 +22,20 @@ class ContractorRating extends Model
     protected function casts(): array
     {
         return [
-            'rating_period_start' => 'date',
-            'rating_period_end' => 'date',
-            'punctuality_score' => 'decimal:1',
-            'quality_score' => 'decimal:1',
-            'safety_score' => 'decimal:1',
-            'wastage_score' => 'decimal:1',
-            'overall_rating' => 'decimal:1',
-            'penalty_amount' => 'decimal:2',
+            'speed' => 'decimal:1',
+            'quality' => 'decimal:1',
         ];
     }
 
     // Relationships
     public function contractor()
     {
-        return $this->belongsTo(User::class, 'contractor_id');
+        return $this->belongsTo(Contractor::class);
+    }
+
+    public function trade()
+    {
+        return $this->belongsTo(ContractorTrade::class, 'trade_id');
     }
 
     public function project()
@@ -55,23 +48,11 @@ class ContractorRating extends Model
         return $this->belongsTo(User::class, 'rated_by');
     }
 
-    // Helper methods
-    public function calculateOverallRating(): float
+    /**
+     * Calculate trade rating: (speed + quality) / 2
+     */
+    public function getTradeRatingAttribute(): float
     {
-        return round(
-            ($this->punctuality_score + $this->quality_score + 
-             $this->safety_score + $this->wastage_score) / 4,
-            1
-        );
-    }
-
-    public function shouldHoldPayment(): bool
-    {
-        return $this->overall_rating < 5.0 || $this->payment_action === 'HOLD';
-    }
-
-    public function shouldApplyPenalty(): bool
-    {
-        return $this->overall_rating < 4.0 || $this->payment_action === 'PENALTY';
+        return round(($this->speed + $this->quality) / 2, 1);
     }
 }

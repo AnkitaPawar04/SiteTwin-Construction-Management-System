@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../../data/models/compliance_models.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/providers.dart';
+import 'rate_contractor_screen.dart';
 
-class ContractorRatingScreen extends StatefulWidget {
+class ContractorRatingScreen extends ConsumerStatefulWidget {
   const ContractorRatingScreen({super.key});
 
   @override
-  State<ContractorRatingScreen> createState() => _ContractorRatingScreenState();
+  ConsumerState<ContractorRatingScreen> createState() => _ContractorRatingScreenState();
 }
 
-class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
-  final NumberFormat _currencyFormat = NumberFormat.currency(symbol: '₹', decimalDigits: 2);
-  
-  List<ContractorRatingModel> _contractors = [];
-  String _sortBy = 'RATING'; // RATING, NAME, TOTAL_VALUE
+class _ContractorRatingScreenState extends ConsumerState<ContractorRatingScreen> {
+  List<Map<String, dynamic>> _contractors = [];
+  String _sortBy = 'NAME'; // NAME, RATING
   bool _isLoading = false;
   String? _error;
 
@@ -30,13 +29,11 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
     });
 
     try {
-      // TODO: Replace with actual API call
-      // final data = await contractorRepository.getContractorRatings();
-      
-      await Future.delayed(const Duration(milliseconds: 500));
+      final contractorRepository = ref.read(contractorRepositoryProvider);
+      final data = await contractorRepository.getContractors();
       
       setState(() {
-        _contractors = [];
+        _contractors = data;
         _isLoading = false;
       });
     } catch (e) {
@@ -47,19 +44,150 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
     }
   }
 
-  List<ContractorRatingModel> get _sortedContractors {
-    var sorted = List<ContractorRatingModel>.from(_contractors);
+  void _showAddContractorDialog() {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final emailController = TextEditingController();
+    final addressController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Contractor'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Contractor Name *',
+                    hintText: 'Enter contractor name',
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Name is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number *',
+                    hintText: 'Enter phone number',
+                    prefixIcon: Icon(Icons.phone),
+                  ),
+                  keyboardType: TextInputType.phone,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Phone is required';
+                    }
+                    if (value.length < 10) {
+                      return 'Phone must be at least 10 digits';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email (Optional)',
+                    hintText: 'Enter email',
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      if (!value.contains('@')) {
+                        return 'Invalid email format';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Address (Optional)',
+                    hintText: 'Enter address',
+                    prefixIcon: Icon(Icons.location_on),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                try {
+                  final contractorRepository = ref.read(contractorRepositoryProvider);
+                  await contractorRepository.createContractor(
+                    name: nameController.text.trim(),
+                    phone: phoneController.text.trim(),
+                    email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                    address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                  );
+                  
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Contractor created successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  
+                  _loadContractors();
+                } catch (e) {
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to create contractor: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> get _sortedContractors {
+    var sorted = List<Map<String, dynamic>>.from(_contractors);
     
     switch (_sortBy) {
       case 'NAME':
-        sorted.sort((a, b) => a.contractorName.compareTo(b.contractorName));
-        break;
-      case 'TOTAL_VALUE':
-        sorted.sort((a, b) => b.totalValue.compareTo(a.totalValue));
+        sorted.sort((a, b) => (a['name'] ?? '').toString().compareTo((b['name'] ?? '').toString()));
         break;
       case 'RATING':
       default:
-        sorted.sort((a, b) => b.rating.compareTo(a.rating));
+        sorted.sort((a, b) {
+          final ratingA = (a['overall_rating'] ?? 0.0) as num;
+          final ratingB = (b['overall_rating'] ?? 0.0) as num;
+          return ratingB.compareTo(ratingA);
+        });
         break;
     }
     
@@ -80,16 +208,12 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'RATING',
-                child: Text('Rating (High to Low)'),
-              ),
-              const PopupMenuItem(
                 value: 'NAME',
                 child: Text('Name (A to Z)'),
               ),
               const PopupMenuItem(
-                value: 'TOTAL_VALUE',
-                child: Text('Total Value (High to Low)'),
+                value: 'RATING',
+                child: Text('Rating (High to Low)'),
               ),
             ],
           ),
@@ -101,6 +225,32 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
         ],
       ),
       body: _buildBody(),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const RateContractorScreen(),
+                ),
+              ).then((_) => _loadContractors());
+            },
+            heroTag: 'rate',
+            child: const Icon(Icons.star_rate),
+            tooltip: 'Rate Contractor',
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            onPressed: _showAddContractorDialog,
+            icon: const Icon(Icons.add),
+            label: const Text('Add Contractor'),
+            tooltip: 'Add New Contractor',
+            heroTag: 'add',
+          ),
+        ],
+      ),
     );
   }
 
@@ -171,33 +321,26 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
     );
   }
 
-  Widget _buildContractorCard(ContractorRatingModel contractor) {
+  Widget _buildContractorCard(Map<String, dynamic> contractor) {
+    final rating = (contractor['overall_rating'] ?? 0.0) as num;
+    final name = contractor['name'] ?? 'Unknown';
+    final phone = contractor['phone'] ?? 'N/A';
+    final email = contractor['email'] ?? 'N/A';
+    final address = contractor['address'] ?? 'N/A';
+    final trades = contractor['trades'] as List<dynamic>? ?? [];
+    
     MaterialColor ratingColor = Colors.grey;
     IconData ratingIcon = Icons.star;
     
-    if (contractor.isGoodRating) {
+    if (rating >= 7.0) {
       ratingColor = Colors.green;
       ratingIcon = Icons.star;
-    } else if (contractor.isAverageRating) {
+    } else if (rating >= 5.0) {
       ratingColor = Colors.orange;
       ratingIcon = Icons.star_half;
-    } else if (contractor.isPoorRating) {
+    } else {
       ratingColor = Colors.red;
       ratingIcon = Icons.star_border;
-    }
-
-    MaterialColor paymentColor = Colors.green;
-    IconData paymentIcon = Icons.check_circle;
-    String paymentText = 'Good Payment';
-    
-    if (contractor.paymentAdvice == 'DELAYED') {
-      paymentColor = Colors.red;
-      paymentIcon = Icons.warning;
-      paymentText = 'Payment Delayed';
-    } else if (contractor.paymentAdvice == 'CAUTION') {
-      paymentColor = Colors.orange;
-      paymentIcon = Icons.error;
-      paymentText = 'Payment Caution';
     }
 
     return Card(
@@ -220,7 +363,7 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          contractor.rating.toStringAsFixed(1),
+                          rating.toStringAsFixed(1),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -237,7 +380,7 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          contractor.contractorName,
+                          name,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -245,7 +388,7 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          contractor.company,
+                          email,
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 13,
@@ -257,7 +400,7 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
                             Icon(Icons.phone, size: 12, color: Colors.grey.shade500),
                             const SizedBox(width: 4),
                             Text(
-                              contractor.phone,
+                              phone,
                               style: TextStyle(
                                 color: Colors.grey.shade500,
                                 fontSize: 12,
@@ -275,93 +418,94 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
               const Divider(height: 1),
               const SizedBox(height: 16),
               
-              // Payment Advice
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: paymentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: paymentColor.withValues(alpha: 0.3)),
+              // Trades
+              if (trades.isNotEmpty) ...[
+                const Text(
+                  'Trades:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                child: Row(
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: trades.map((trade) {
+                    final tradeType = trade['trade_type'] ?? 'Unknown';
+                    final avgRating = trade['average_rating'] ?? 0.0;
+                    return Chip(
+                      label: Text(
+                        '$tradeType (${avgRating.toStringAsFixed(1)})',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      backgroundColor: Colors.blue.shade50,
+                    );
+                  }).toList(),
+                ),
+              ] else
+                Text(
+                  'No trades assigned',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              
+              const SizedBox(height: 16),
+              
+              // Address
+              if (address != 'N/A')
+                Row(
                   children: [
-                    Icon(paymentIcon, color: paymentColor[700]!, size: 20),
-                    const SizedBox(width: 12),
+                    Icon(Icons.location_on, size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        paymentText,
+                        address,
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: paymentColor[700]!,
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
               
               const SizedBox(height: 16),
               
-              // Statistics
+              // Action Buttons
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard(
-                      'Projects',
-                      '${contractor.completedProjects}/${contractor.totalProjects}',
-                      Icons.business,
-                      Colors.blue,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showContractorDetails(contractor),
+                      icon: const Icon(Icons.info_outline, size: 18),
+                      label: const Text('View Details'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: _buildStatCard(
-                      'Quality',
-                      contractor.qualityScore.toStringAsFixed(1),
-                      Icons.stars,
-                      Colors.purple,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'On-Time',
-                      '${contractor.onTimeDeliveryRate.toStringAsFixed(0)}%',
-                      Icons.schedule,
-                      Colors.teal,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Value',
-                      _currencyFormat.format(contractor.totalValue),
-                      Icons.attach_money,
-                      Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Last Project
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Last Project: ${DateFormat('dd MMM yyyy').format(DateTime.parse(contractor.lastProjectDate))}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TradeHistoryScreen(
+                              contractor: contractor,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.history, size: 18),
+                      label: const Text('History'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
                   ),
                 ],
@@ -373,44 +517,13 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, MaterialColor color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: color[700]!),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: color[700]!,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showContractorDetails(ContractorRatingModel contractor) {
+  void _showContractorDetails(Map<String, dynamic> contractor) {
+    final name = contractor['name'] ?? 'Unknown';
+    final phone = contractor['phone'] ?? 'N/A';
+    final email = contractor['email'] ?? 'N/A';
+    final address = contractor['address'] ?? 'N/A';
+    final rating = (contractor['overall_rating'] ?? 0.0) as num;
+    final trades = contractor['trades'] as List<dynamic>? ?? [];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -455,7 +568,7 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            contractor.contractorName,
+                            name,
                             style: TextStyle(
                               color: Colors.grey.shade600,
                               fontSize: 14,
@@ -480,49 +593,56 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
                   padding: const EdgeInsets.all(20),
                   children: [
                     _buildDetailSection('Basic Information', [
-                      _buildDetailRow('Company', contractor.company),
-                      _buildDetailRow('Phone', contractor.phone),
-                      _buildDetailRow('Overall Rating', '${contractor.rating.toStringAsFixed(1)} / 10.0'),
-                      _buildDetailRow('Payment Advice', contractor.paymentAdvice),
+                      _buildDetailRow('Name', name),
+                      _buildDetailRow('Phone', phone),
+                      _buildDetailRow('Email', email),
+                      _buildDetailRow('Address', address),
+                      _buildDetailRow('Overall Rating', '${rating.toStringAsFixed(1)} / 10.0'),
                     ]),
                     
-                    const SizedBox(height: 16),
-                    
-                    _buildDetailSection('Performance Metrics', [
-                      _buildDetailRow('Total Projects', contractor.totalProjects.toString()),
-                      _buildDetailRow('Completed Projects', contractor.completedProjects.toString()),
-                      _buildDetailRow('Quality Score', '${contractor.qualityScore.toStringAsFixed(1)} / 10.0'),
-                      _buildDetailRow('On-Time Delivery', '${contractor.onTimeDeliveryRate.toStringAsFixed(1)}%'),
-                      _buildDetailRow('Total POs', contractor.totalPOs.toString()),
-                      _buildDetailRow('Total Value', _currencyFormat.format(contractor.totalValue)),
-                    ]),
-                    
-                    if (contractor.recentProjects.isNotEmpty) ...[
+                    if (trades.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       const Text(
-                        'Recent Projects',
+                        'Trades',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      ...contractor.recentProjects.map((project) => Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.blue.shade100,
-                            child: Icon(Icons.business, color: Colors.blue[700]!),
+                      ...trades.map((trade) {
+                        final tradeType = trade['trade_type'] ?? 'Unknown';
+                        final avgRating = trade['average_rating'] ?? 0.0;
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.blue.shade100,
+                              child: Icon(Icons.build, color: Colors.blue[700]!),
+                            ),
+                            title: Text(tradeType),
+                            trailing: Chip(
+                              label: Text(avgRating.toStringAsFixed(1)),
+                              backgroundColor: avgRating >= 7.0 ? Colors.green.shade100 : 
+                                              avgRating >= 5.0 ? Colors.orange.shade100 : Colors.red.shade100,
+                            ),
                           ),
-                          title: Text(project.projectName),
-                          subtitle: Text('Rating: ${project.rating.toStringAsFixed(1)}'),
-                          trailing: Chip(
-                            label: Text(project.status),
-                            labelStyle: const TextStyle(fontSize: 10),
-                          ),
-                        ),
-                      )),
+                        );
+                      }),
                     ],
+                    
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showAddTradeDialog(contractor);
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Trade'),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -576,6 +696,125 @@ class _ContractorRatingScreenState extends State<ContractorRatingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAddTradeDialog(Map<String, dynamic> contractor) {
+    final contractorId = contractor['id'] as int;
+    final contractorName = contractor['name'] ?? 'Unknown';
+    final existingTrades = (contractor['trades'] as List<dynamic>? ?? [])
+        .map((t) => t['trade_type'] as String)
+        .toSet();
+
+    // All available trade types from backend
+    final availableTrades = [
+      'Plumbing',
+      'Electrical',
+      'Tiling',
+      'Painting',
+      'Carpentry',
+      'Masonry',
+      'Plastering',
+      'Waterproofing',
+      'Flooring',
+      'Roofing',
+      'HVAC',
+      'Other',
+    ];
+
+    // Filter out already assigned trades
+    final unassignedTrades = availableTrades
+        .where((trade) => !existingTrades.contains(trade))
+        .toList();
+
+    if (unassignedTrades.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All trades have been assigned to this contractor'),
+        ),
+      );
+      return;
+    }
+
+    String? selectedTrade;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Add Trade to $contractorName'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Select a trade to add:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedTrade,
+                decoration: const InputDecoration(
+                  labelText: 'Trade Type',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.build),
+                ),
+                items: unassignedTrades.map((trade) {
+                  return DropdownMenuItem(
+                    value: trade,
+                    child: Text(trade),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setDialogState(() => selectedTrade = value);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selectedTrade == null
+                  ? null
+                  : () async {
+                      try {
+                        final contractorRepository = ref.read(contractorRepositoryProvider);
+                        await contractorRepository.addContractorTrade(
+                          contractorId: contractorId,
+                          tradeType: selectedTrade!,
+                        );
+
+                        if (!mounted) return;
+                        Navigator.pop(context);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Trade "$selectedTrade" added successfully'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+
+                        _loadContractors();
+                      } catch (e) {
+                        if (!mounted) return;
+                        Navigator.pop(context);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to add trade: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
       ),
     );
   }

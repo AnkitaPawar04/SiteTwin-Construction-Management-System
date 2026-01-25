@@ -1,5 +1,188 @@
-// Phase 6: Advanced Compliance & Field Features Models
+// Contractor Rating Models - Aligned with Design Document
 
+class Contractor {
+  final int id;
+  final String name;
+  final String? phone;
+  final String? email;
+  final String? address;
+  final List<ContractorTrade> trades;
+
+  Contractor({
+    required this.id,
+    required this.name,
+    this.phone,
+    this.email,
+    this.address,
+    this.trades = const [],
+  });
+
+  factory Contractor.fromJson(Map<String, dynamic> json) {
+    return Contractor(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      phone: json['phone'] as String?,
+      email: json['email'] as String?,
+      address: json['address'] as String?,
+      trades: (json['trades'] as List<dynamic>?)
+          ?.map((item) => ContractorTrade.fromJson(item as Map<String, dynamic>))
+          .toList() ?? [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'email': email,
+      'address': address,
+      'trades': trades.map((t) => t.toJson()).toList(),
+    };
+  }
+}
+
+class ContractorTrade {
+  final int id;
+  final int contractorId;
+  final String tradeType;
+  final double? averageRating;
+
+  ContractorTrade({
+    required this.id,
+    required this.contractorId,
+    required this.tradeType,
+    this.averageRating,
+  });
+
+  factory ContractorTrade.fromJson(Map<String, dynamic> json) {
+    return ContractorTrade(
+      id: json['id'] as int,
+      contractorId: json['contractor_id'] as int,
+      tradeType: json['trade_type'] as String,
+      averageRating: json['average_rating'] != null 
+          ? (json['average_rating'] as num).toDouble()
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'contractor_id': contractorId,
+      'trade_type': tradeType,
+      'average_rating': averageRating,
+    };
+  }
+}
+
+class TradeRating {
+  final int? id;
+  final int contractorId;
+  final int tradeId;
+  final int projectId;
+  final double speed;      // 1-10
+  final double quality;    // 1-10
+  final String? comments;
+  final String? ratedBy;
+  final String? ratedAt;
+
+  TradeRating({
+    this.id,
+    required this.contractorId,
+    required this.tradeId,
+    required this.projectId,
+    required this.speed,
+    required this.quality,
+    this.comments,
+    this.ratedBy,
+    this.ratedAt,
+  });
+
+  // Calculate trade rating: (speed + quality) / 2
+  double get tradeRating => (speed + quality) / 2;
+
+  factory TradeRating.fromJson(Map<String, dynamic> json) {
+    return TradeRating(
+      id: json['id'] as int?,
+      contractorId: json['contractor_id'] as int,
+      tradeId: json['trade_id'] as int,
+      projectId: json['project_id'] as int,
+      speed: (json['speed'] as num).toDouble(),
+      quality: (json['quality'] as num).toDouble(),
+      comments: json['comments'] as String?,
+      ratedBy: json['rated_by'] as String?,
+      ratedAt: json['created_at'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'contractor_id': contractorId,
+      'trade_id': tradeId,
+      'project_id': projectId,
+      'speed': speed,
+      'quality': quality,
+      'comments': comments,
+    };
+  }
+}
+
+class ContractorSummary {
+  final int contractorId;
+  final String contractorName;
+  final double overallRating;
+  final List<TradeSummary> trades;
+
+  ContractorSummary({
+    required this.contractorId,
+    required this.contractorName,
+    required this.overallRating,
+    required this.trades,
+  });
+
+  factory ContractorSummary.fromJson(Map<String, dynamic> json) {
+    return ContractorSummary(
+      contractorId: json['contractor_id'] as int,
+      contractorName: json['contractor_name'] as String,
+      overallRating: (json['overall_rating'] as num).toDouble(),
+      trades: (json['trades'] as List<dynamic>?)
+          ?.map((item) => TradeSummary.fromJson(item as Map<String, dynamic>))
+          .toList() ?? [],
+    );
+  }
+}
+
+class TradeSummary {
+  final int tradeId;
+  final String tradeType;
+  final double avgSpeed;
+  final double avgQuality;
+  final double tradeRating;
+  final int totalRatings;
+
+  TradeSummary({
+    required this.tradeId,
+    required this.tradeType,
+    required this.avgSpeed,
+    required this.avgQuality,
+    required this.tradeRating,
+    required this.totalRatings,
+  });
+
+  factory TradeSummary.fromJson(Map<String, dynamic> json) {
+    return TradeSummary(
+      tradeId: json['trade_id'] as int,
+      tradeType: json['trade_type'] as String,
+      avgSpeed: (json['avg_speed'] as num).toDouble(),
+      avgQuality: (json['avg_quality'] as num).toDouble(),
+      tradeRating: (json['trade_rating'] as num).toDouble(),
+      totalRatings: json['total_ratings'] as int,
+    );
+  }
+}
+
+// OLD MODELS - To be removed or kept for backward compatibility
 class ContractorRatingModel {
   final int contractorId;
   final String contractorName;

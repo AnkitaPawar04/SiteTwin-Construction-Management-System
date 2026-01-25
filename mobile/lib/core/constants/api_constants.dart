@@ -58,4 +58,12 @@ class ApiConstants {
   
   // Offline Sync
   static const String offlineSync = '/offline-sync';
+  
+  // Contractors
+  static const String contractors = '/contractors';
+  static const String contractorTrades = '/contractors/{id}/trades';
+  static const String contractorSummary = '/contractors/{id}/summary';
+  static const String contractorRatings = '/contractor-ratings';
+  static const String tradeHistory = '/trades/{id}/history';
+  static const String projectContractorRatings = '/projects/{id}/contractor-ratings';
 }

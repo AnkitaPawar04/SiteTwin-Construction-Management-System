@@ -3,128 +3,151 @@
 namespace App\Services;
 
 use App\Models\ContractorRating;
-use App\Models\User;
-use App\Models\Project;
+use App\Models\Contractor;
+use App\Models\ContractorTrade;
 use Illuminate\Support\Facades\DB;
 
 class ContractorRatingService
 {
     /**
-     * Create or update contractor rating
+     * Create or update trade rating
+     * Rating logic: trade_rating = (speed + quality) / 2
      */
-    public function rateContractor(array $data): ContractorRating
+    public function rateTrade(array $data): ContractorRating
     {
         $rating = ContractorRating::updateOrCreate(
             [
-                'contractor_id' => $data['contractor_id'],
+                'trade_id' => $data['trade_id'],
                 'project_id' => $data['project_id'],
-                'rating_period_start' => $data['rating_period_start'],
             ],
             [
-                'rating_period_end' => $data['rating_period_end'],
-                'punctuality_score' => $data['punctuality_score'],
-                'quality_score' => $data['quality_score'],
-                'safety_score' => $data['safety_score'],
-                'wastage_score' => $data['wastage_score'],
+                'contractor_id' => $data['contractor_id'],
+                'speed' => $data['speed'],
+                'quality' => $data['quality'],
                 'rated_by' => $data['rated_by'],
                 'comments' => $data['comments'] ?? null,
             ]
         );
 
-        // Calculate overall rating
-        $overallRating = $rating->calculateOverallRating();
-        
-        // Determine payment action
-        $paymentAction = $this->determinePaymentAction($overallRating);
-        $penaltyAmount = $this->calculatePenalty($overallRating, $data['penalty_base_amount'] ?? 0);
-
-        $rating->update([
-            'overall_rating' => $overallRating,
-            'payment_action' => $paymentAction,
-            'penalty_amount' => $penaltyAmount,
-        ]);
-
-        return $rating->fresh();
+        return $rating->fresh(['trade', 'contractor', 'project', 'ratedBy']);
     }
 
     /**
-     * Get contractor performance history
+     * Get contractor overall rating (average of all trade ratings)
      */
-    public function getContractorHistory(int $contractorId, ?int $projectId = null)
+    public function getContractorOverallRating(int $contractorId, ?int $projectId = null): float
     {
-        $query = ContractorRating::where('contractor_id', $contractorId)
+        $query = ContractorRating::where('contractor_id', $contractorId);
+        
+        if ($projectId) {
+            $query->where('project_id', $projectId);
+        }
+
+        $ratings = $query->get();
+        
+        if ($ratings->isEmpty()) {
+            return 0;
+        }
+
+        // Calculate average of all trade ratings
+        // Each trade rating = (speed + quality) / 2
+        $totalRating = $ratings->sum(function ($rating) {
+            return ($rating->speed + $rating->quality) / 2;
+        });
+
+        return round($totalRating / $ratings->count(), 1);
+    }
+
+    /**
+     * Get trade performance history
+     */
+    public function getTradeHistory(int $tradeId, ?int $projectId = null)
+    {
+        $query = ContractorRating::where('trade_id', $tradeId)
             ->with(['project', 'ratedBy']);
 
         if ($projectId) {
             $query->where('project_id', $projectId);
         }
 
-        return $query->orderBy('rating_period_start', 'desc')->get();
+        return $query->orderBy('created_at', 'desc')->get();
     }
 
     /**
-     * Get contractor average rating
+     * Get contractor performance summary
      */
-    public function getContractorAverageRating(int $contractorId): array
+    public function getContractorSummary(int $contractorId): array
     {
-        $ratings = ContractorRating::where('contractor_id', $contractorId)
-            ->selectRaw('
-                AVG(punctuality_score) as avg_punctuality,
-                AVG(quality_score) as avg_quality,
-                AVG(safety_score) as avg_safety,
-                AVG(wastage_score) as avg_wastage,
-                AVG(overall_rating) as avg_overall,
-                COUNT(*) as total_ratings
-            ')
-            ->first();
+        $contractor = Contractor::with('trades.ratings')->findOrFail($contractorId);
+        
+        $tradeRatings = [];
+        
+        foreach ($contractor->trades as $trade) {
+            $avgSpeed = $trade->ratings->avg('speed');
+            $avgQuality = $trade->ratings->avg('quality');
+            
+            $tradeRatings[] = [
+                'trade_id' => $trade->id,
+                'trade_type' => $trade->trade_type,
+                'avg_speed' => round($avgSpeed ?? 0, 1),
+                'avg_quality' => round($avgQuality ?? 0, 1),
+                'trade_rating' => round((($avgSpeed ?? 0) + ($avgQuality ?? 0)) / 2, 1),
+                'total_ratings' => $trade->ratings->count(),
+            ];
+        }
+
+        // Overall rating = average of all trade ratings
+        $overallRating = 0;
+        if (!empty($tradeRatings)) {
+            $sumTradeRatings = array_sum(array_column($tradeRatings, 'trade_rating'));
+            $overallRating = round($sumTradeRatings / count($tradeRatings), 1);
+        }
 
         return [
-            'avg_punctuality' => round($ratings->avg_punctuality ?? 0, 1),
-            'avg_quality' => round($ratings->avg_quality ?? 0, 1),
-            'avg_safety' => round($ratings->avg_safety ?? 0, 1),
-            'avg_wastage' => round($ratings->avg_wastage ?? 0, 1),
-            'avg_overall' => round($ratings->avg_overall ?? 0, 1),
-            'total_ratings' => $ratings->total_ratings,
+            'contractor_id' => $contractor->id,
+            'contractor_name' => $contractor->name,
+            'overall_rating' => $overallRating,
+            'trades' => $tradeRatings,
         ];
     }
 
     /**
-     * Get contractors with poor ratings (below threshold)
+     * Get all contractors with ratings for a project
      */
-    public function getContractorsNeedingAttention(float $threshold = 5.0): array
+    public function getProjectContractorRatings(int $projectId): array
     {
-        return ContractorRating::where('overall_rating', '<', $threshold)
-            ->with(['contractor', 'project'])
-            ->orderBy('overall_rating', 'asc')
+        $ratings = ContractorRating::where('project_id', $projectId)
+            ->with(['contractor', 'trade', 'ratedBy'])
             ->get()
-            ->toArray();
-    }
+            ->groupBy('contractor_id');
 
-    /**
-     * Determine payment action based on rating
-     */
-    private function determinePaymentAction(float $rating): string
-    {
-        if ($rating < 4.0) {
-            return 'PENALTY';
-        } elseif ($rating < 5.0) {
-            return 'HOLD';
-        }
-        return 'NORMAL';
-    }
-
-    /**
-     * Calculate penalty amount
-     */
-    private function calculatePenalty(float $rating, float $baseAmount): ?float
-    {
-        if ($rating >= 4.0) {
-            return null;
-        }
-
-        // Penalty percentage increases as rating decreases
-        $penaltyPercentage = (4.0 - $rating) * 10; // 10% per rating point below 4
+        $result = [];
         
-        return round($baseAmount * ($penaltyPercentage / 100), 2);
+        foreach ($ratings as $contractorId => $contractorRatings) {
+            $contractor = $contractorRatings->first()->contractor;
+            
+            $trades = $contractorRatings->map(function ($rating) {
+                return [
+                    'trade_id' => $rating->trade_id,
+                    'trade_type' => $rating->trade->trade_type,
+                    'speed' => $rating->speed,
+                    'quality' => $rating->quality,
+                    'trade_rating' => round(($rating->speed + $rating->quality) / 2, 1),
+                    'rated_by' => $rating->ratedBy->name,
+                    'comments' => $rating->comments,
+                ];
+            })->toArray();
+
+            $overallRating = collect($trades)->avg('trade_rating');
+
+            $result[] = [
+                'contractor_id' => $contractorId,
+                'contractor_name' => $contractor->name,
+                'overall_rating' => round($overallRating, 1),
+                'trades' => $trades,
+            ];
+        }
+
+        return $result;
     }
 }
