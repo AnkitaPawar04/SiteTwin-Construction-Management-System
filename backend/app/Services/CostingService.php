@@ -13,13 +13,15 @@ use Illuminate\Support\Facades\DB;
 class CostingService
 {
     /**
-     * Calculate total project cost from Purchase Orders.
+     * Calculate total project cost from all sources:
+     * Material (Purchase Orders) + Labor (Daily Wagers) + Misc (Petty Cash)
      * 
      * @param int $projectId
      * @return array
      */
     public function calculateProjectCost(int $projectId): array
     {
+        // Material costs from Purchase Orders
         $purchaseOrders = PurchaseOrder::where('project_id', $projectId)
             ->whereIn('status', [
                 PurchaseOrder::STATUS_APPROVED,
@@ -28,35 +30,36 @@ class CostingService
             ])
             ->get();
 
-        $totalMaterialCost = 0;
+        $materialCost = 0;
         $totalGstAmount = 0;
-        $gstCost = 0;
-        $nonGstCost = 0;
-        $poCount = 0;
 
         foreach ($purchaseOrders as $po) {
-            $totalMaterialCost += $po->total_amount;
+            $materialCost += $po->total_amount;
             $totalGstAmount += $po->gst_amount;
-            
-            if ($po->type === 'gst') {
-                $gstCost += $po->grand_total;
-            } else {
-                $nonGstCost += $po->grand_total;
-            }
-            
-            $poCount++;
         }
 
-        $grandTotal = $totalMaterialCost + $totalGstAmount;
+        $materialCostWithGst = $materialCost + $totalGstAmount;
+
+        // Labor costs from Daily Wager Attendance
+        $laborCost = DB::table('daily_wager_attendance')
+            ->where('project_id', $projectId)
+            ->whereIn('status', ['VERIFIED'])
+            ->sum('total_wage');
+
+        // Misc expenses from Petty Cash
+        $miscCost = DB::table('petty_cash_transactions')
+            ->where('project_id', $projectId)
+            ->whereIn('status', ['APPROVED', 'PAID'])
+            ->sum('amount');
+
+        $totalProjectCost = $materialCostWithGst + $laborCost + $miscCost;
 
         return [
             'project_id' => $projectId,
-            'total_material_cost' => round($totalMaterialCost, 2),
-            'total_gst_amount' => round($totalGstAmount, 2),
-            'grand_total_cost' => round($grandTotal, 2),
-            'gst_procurement_cost' => round($gstCost, 2),
-            'non_gst_procurement_cost' => round($nonGstCost, 2),
-            'purchase_order_count' => $poCount,
+            'material_cost' => round($materialCostWithGst, 2),
+            'labor_cost' => round($laborCost, 2),
+            'misc_cost' => round($miscCost, 2),
+            'grand_total_cost' => round($totalProjectCost, 2),
             'calculated_at' => now()->toDateTimeString(),
         ];
     }
@@ -145,7 +148,11 @@ class CostingService
     }
 
     /**
-     * Calculate flat costing (total cost per unit).
+     * Calculate flat costing (equal cost per unit).
+     * Cost per Flat = Total Project Cost / Total Number of Flats
+     * 
+     * As per specification: Simple equal distribution across all flats.
+     * No profit calculation, no database updates - display only.
      * 
      * @param int $projectId
      * @return array
@@ -156,43 +163,50 @@ class CostingService
         $projectCost = $this->calculateProjectCost($projectId);
         
         $units = ProjectUnit::where('project_id', $projectId)->get();
-        $totalUnits = $units->count();
+        $totalFlats = $units->count();
 
-        if ($totalUnits === 0) {
+        if ($totalFlats === 0) {
             return [
                 'project_id' => $projectId,
-                'total_cost' => $projectCost['grand_total_cost'],
-                'total_units' => 0,
-                'cost_per_unit' => 0,
-                'message' => 'No units defined for this project',
+                'project_name' => $project->name,
+                'total_project_cost' => round($projectCost['grand_total_cost'], 2),
+                'material_cost' => $projectCost['material_cost'],
+                'labor_cost' => $projectCost['labor_cost'],
+                'misc_cost' => $projectCost['misc_cost'],
+                'total_flats' => 0,
+                'cost_per_flat' => 0,
+                'sold_flats' => 0,
+                'unsold_flats' => 0,
+                'cost_allocated_sold' => 0,
+                'inventory_value_unsold' => 0,
+                'message' => 'No flats/units defined for this project',
             ];
         }
 
-        $costPerUnit = $projectCost['grand_total_cost'] / $totalUnits;
+        // Equal distribution: Cost per Flat = Total Cost / Total Flats
+        $costPerFlat = $projectCost['grand_total_cost'] / $totalFlats;
 
-        // Update allocated cost for each unit
-        foreach ($units as $unit) {
-            $unit->update(['allocated_cost' => $costPerUnit]);
-        }
+        // Count sold and unsold flats
+        $soldFlats = $units->where('is_sold', true)->count();
+        $unsoldFlats = $totalFlats - $soldFlats;
 
-        $soldUnits = $units->where('is_sold', true)->count();
-        $unsoldUnits = $totalUnits - $soldUnits;
-        $soldRevenue = $units->where('is_sold', true)->sum('sold_price');
-        $allocatedCostSold = $soldUnits * $costPerUnit;
-        $allocatedCostUnsold = $unsoldUnits * $costPerUnit;
+        // Allocate cost to sold vs unsold
+        $costAllocatedSold = $soldFlats * $costPerFlat;
+        $inventoryValueUnsold = $unsoldFlats * $costPerFlat;
 
         return [
             'project_id' => $projectId,
             'project_name' => $project->name,
             'total_project_cost' => round($projectCost['grand_total_cost'], 2),
-            'total_units' => $totalUnits,
-            'cost_per_unit' => round($costPerUnit, 2),
-            'sold_units' => $soldUnits,
-            'unsold_units' => $unsoldUnits,
-            'sold_units_revenue' => round($soldRevenue, 2),
-            'sold_units_cost' => round($allocatedCostSold, 2),
-            'unsold_units_inventory_value' => round($allocatedCostUnsold, 2),
-            'total_profit_loss' => round($soldRevenue - $allocatedCostSold, 2),
+            'material_cost' => $projectCost['material_cost'],
+            'labor_cost' => $projectCost['labor_cost'],
+            'misc_cost' => $projectCost['misc_cost'],
+            'total_flats' => $totalFlats,
+            'cost_per_flat' => round($costPerFlat, 2),
+            'sold_flats' => $soldFlats,
+            'unsold_flats' => $unsoldFlats,
+            'cost_allocated_sold' => round($costAllocatedSold, 2),
+            'inventory_value_unsold' => round($inventoryValueUnsold, 2),
         ];
     }
 

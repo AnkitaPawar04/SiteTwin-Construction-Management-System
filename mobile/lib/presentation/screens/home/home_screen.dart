@@ -18,6 +18,7 @@ import 'package:mobile/presentation/screens/invoice/invoice_list_screen.dart';
 import 'package:mobile/presentation/screens/analytics/cost_dashboard_screen.dart';
 import 'package:mobile/presentation/screens/analytics/consumption_variance_screen.dart';
 import 'package:mobile/presentation/screens/analytics/unit_costing_screen.dart';
+import 'package:mobile/presentation/screens/analytics/flat_costing_screen.dart';
 import 'package:mobile/presentation/screens/compliance/contractor_rating_screen.dart';
 import 'package:mobile/presentation/screens/compliance/face_recall_attendance_screen.dart';
 import 'package:mobile/presentation/screens/compliance/tool_library_screen.dart';
@@ -485,6 +486,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const UnitCostingScreen(),
+                  ),
+                );
+              },
+            ),
+          
+          // Flat Costing - Owners and Project Managers
+          if (user.role == 'owner' || user.role == 'manager' || user.role == 'project_manager')
+            ListTile(
+              leading: const Icon(Icons.calculate),
+              title: const Text('Flat Costing'),
+              subtitle: const Text('Cost per flat calculation'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FlatCostingScreen(),
                   ),
                 );
               },
