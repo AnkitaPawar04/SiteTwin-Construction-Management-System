@@ -163,29 +163,40 @@ class InvoicesScreen extends ConsumerWidget {
                     subtitle: Text(
                       '${invoice.projectName ?? 'Project #${invoice.projectId}'}\n${DateFormat('dd MMM yyyy').format(DateTime.parse(invoice.createdAt))}',
                     ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '₹${NumberFormat('#,##,###').format(invoice.totalAmount)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Chip(
-                          label: Text(
-                            invoice.status.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '₹${NumberFormat('#,##,###').format(invoice.totalAmount)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                          backgroundColor:
-                              isPaid ? AppTheme.successColor : AppTheme.warningColor,
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
+                            Chip(
+                              label: Text(
+                                invoice.status.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              backgroundColor:
+                                  isPaid ? AppTheme.successColor : AppTheme.warningColor,
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                          tooltip: 'View PDF',
+                          onPressed: () => _viewPdf(context, invoice.id.toString()),
                         ),
                       ],
                     ),

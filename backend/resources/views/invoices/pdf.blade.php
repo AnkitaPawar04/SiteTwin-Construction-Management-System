@@ -173,10 +173,17 @@
                 <p>Project ID: {{ $invoice->project->id ?? 'N/A' }}</p>
             </div>
             <div class="details-block">
-                <h4>PROJECT DETAILS:</h4>
-                <p><strong>Project:</strong> {{ $invoice->project->name ?? 'N/A' }}</p>
-                <p><strong>Start Date:</strong> {{ $invoice->project->start_date ? \Carbon\Carbon::parse($invoice->project->start_date)->format('d/m/Y') : 'N/A' }}</p>
-                <p><strong>End Date:</strong> {{ $invoice->project->end_date ? \Carbon\Carbon::parse($invoice->project->end_date)->format('d/m/Y') : 'N/A' }}</p>
+                @if($invoice->purchase_order_id)
+                    <h4>PURCHASE ORDER:</h4>
+                    <p><strong>PO Number:</strong> {{ $invoice->purchaseOrder->po_number ?? 'N/A' }}</p>
+                    <p><strong>PO Date:</strong> {{ $invoice->purchaseOrder->created_at ? $invoice->purchaseOrder->created_at->format('d/m/Y') : 'N/A' }}</p>
+                    <p><strong>Vendor:</strong> {{ $invoice->purchaseOrder->vendor->name ?? 'N/A' }}</p>
+                @else
+                    <h4>PROJECT DETAILS:</h4>
+                    <p><strong>Project:</strong> {{ $invoice->project->name ?? 'N/A' }}</p>
+                    <p><strong>Start Date:</strong> {{ $invoice->project->start_date ? \Carbon\Carbon::parse($invoice->project->start_date)->format('d/m/Y') : 'N/A' }}</p>
+                    <p><strong>End Date:</strong> {{ $invoice->project->end_date ? \Carbon\Carbon::parse($invoice->project->end_date)->format('d/m/Y') : 'N/A' }}</p>
+                @endif
             </div>
         </div>
 
@@ -184,25 +191,38 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 40%;">Description</th>
-                    <th style="width: 15%; text-align: right;">Quantity</th>
-                    <th style="width: 15%; text-align: right;">Amount (₹)</th>
-                    <th style="width: 15%; text-align: right;">GST %</th>
-                    <th style="width: 15%; text-align: right;">Total (₹)</th>
+                    <th style="width: 30%;">Description</th>
+                    <th style="width: 10%; text-align: center;">Unit</th>
+                    <th style="width: 12%; text-align: right;">Quantity</th>
+                    <th style="width: 12%; text-align: right;">Rate (Rs.)</th>
+                    <th style="width: 12%; text-align: right;">Amount (Rs.)</th>
+                    <th style="width: 12%; text-align: right;">GST %</th>
+                    <th style="width: 12%; text-align: right;">Total (Rs.)</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($invoice->items as $item)
                 <tr>
-                    <td>{{ $item->description }}</td>
-                    <td class="text-right">{{ $item->quantity ?? 1 }}</td>
-                    <td class="text-right">{{ number_format($item->amount, 2) }}</td>
-                    <td class="text-right">{{ $item->gst_percentage }}%</td>
-                    <td class="text-right">{{ number_format($item->amount + ($item->amount * $item->gst_percentage / 100), 2) }}</td>
+                    <td>
+                        @if($item->material)
+                            {{ $item->material->name }}
+                            @if($item->material->code)
+                                <br><small style="color: #666;">({{ $item->material->code }})</small>
+                            @endif
+                        @else
+                            {{ $item->description ?? 'N/A' }}
+                        @endif
+                    </td>
+                    <td class="text-center">{{ $item->unit ?? '-' }}</td>
+                    <td class="text-right">{{ number_format($item->quantity ?? 1, 2) }}</td>
+                    <td class="text-right">{{ number_format($item->rate ?? 0, 2) }}</td>
+                    <td class="text-right">{{ number_format($item->amount ?? 0, 2) }}</td>
+                    <td class="text-right">{{ $item->gst_percentage ?? 0 }}%</td>
+                    <td class="text-right">{{ number_format(($item->total_amount ?? ($item->amount + $item->gst_amount ?? 0)), 2) }}</td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center">No items found</td>
+                    <td colspan="7" class="text-center">No items found</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -213,15 +233,15 @@
             <table class="summary-table">
                 <tr>
                     <td class="label">Subtotal:</td>
-                    <td class="value">₹ {{ number_format($invoice->subtotal_amount ?? 0, 2) }}</td>
+                    <td class="value">Rs. {{ number_format($invoice->total_amount ?? 0, 2) }}</td>
                 </tr>
                 <tr>
                     <td class="label">GST:</td>
-                    <td class="value">₹ {{ number_format($invoice->gst_amount ?? 0, 2) }}</td>
+                    <td class="value">Rs. {{ number_format($invoice->gst_amount ?? 0, 2) }}</td>
                 </tr>
                 <tr class="total-row">
                     <td class="label" style="color: white;">TOTAL:</td>
-                    <td class="value" style="color: white;">₹ {{ number_format($invoice->total_amount ?? 0, 2) }}</td>
+                    <td class="value" style="color: white;">Rs. {{ number_format($invoice->total_amount ?? 0, 2) }}</td>
                 </tr>
             </table>
         </div>

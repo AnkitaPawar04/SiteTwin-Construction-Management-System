@@ -17,6 +17,7 @@ class Invoice extends Model
 
     protected $fillable = [
         'project_id',
+        'purchase_order_id',
         'task_id',
         'dpr_id',
         'invoice_number',
@@ -52,6 +53,11 @@ class Invoice extends Model
     public function dpr()
     {
         return $this->belongsTo(DailyProgressReport::class, 'dpr_id');
+    }
+
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
     }
 
     /**

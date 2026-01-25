@@ -14,9 +14,6 @@ class PurchaseOrder extends Model
     const STATUS_DELIVERED = 'delivered';
     const STATUS_CLOSED = 'closed';
 
-    const TYPE_GST = 'gst';
-    const TYPE_NON_GST = 'non_gst';
-
     public $timestamps = false;
 
     protected $fillable = [
@@ -26,12 +23,10 @@ class PurchaseOrder extends Model
         'material_request_id',
         'created_by',
         'status',
-        'type',
         'total_amount',
         'gst_amount',
         'grand_total',
         'invoice_file',
-        'invoice_type',
         'invoice_number',
         'approved_at',
         'delivered_at',
@@ -90,6 +85,11 @@ class PurchaseOrder extends Model
     public function items()
     {
         return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class, 'purchase_order_id');
     }
 
     // Helper methods

@@ -23,7 +23,7 @@ class PurchaseOrderModel extends HiveObject {
   final double totalAmount;
   
   @HiveField(6)
-  final String gstType; // 'GST' or 'NON_GST'
+  final String? gstType; // 'GST', 'NON_GST', or 'MIXED' (calculated from items)
   
   @HiveField(7)
   final String status; // 'CREATED', 'APPROVED', 'DELIVERED', 'CLOSED'
@@ -68,7 +68,7 @@ class PurchaseOrderModel extends HiveObject {
     required this.poNumber,
     required this.poDate,
     required this.totalAmount,
-    required this.gstType,
+    this.gstType, // Now optional, calculated from items
     required this.status,
     this.items = const [],
     this.vendorName,
@@ -84,6 +84,12 @@ class PurchaseOrderModel extends HiveObject {
   });
 
   factory PurchaseOrderModel.fromJson(Map<String, dynamic> json) {
+    final items = json['items'] != null
+        ? (json['items'] as List)
+            .map((item) => PurchaseOrderItemModel.fromJson(item as Map<String, dynamic>))
+            .toList()
+        : <PurchaseOrderItemModel>[];
+    
     return PurchaseOrderModel(
       id: _parseId(json['id']),
       materialRequestId: json['material_request_id'] != null 
@@ -93,13 +99,9 @@ class PurchaseOrderModel extends HiveObject {
       poNumber: json['po_number']?.toString() ?? '',
       poDate: (json['po_date'] ?? json['created_at'])?.toString() ?? DateTime.now().toIso8601String(),
       totalAmount: _parseDouble(json['grand_total'] ?? json['total_amount']), // Backend uses grand_total
-      gstType: (json['type']?.toString() == 'gst' || json['type']?.toString() == 'GST') ? 'GST' : 'NON_GST',
+      gstType: _calculateGSTType(items), // Calculate from items
       status: json['status']?.toString().toUpperCase() ?? 'CREATED',
-      items: json['items'] != null
-          ? (json['items'] as List)
-              .map((item) => PurchaseOrderItemModel.fromJson(item as Map<String, dynamic>))
-              .toList()
-          : [],
+      items: items,
       vendorName: json['vendor_name']?.toString(),
       notes: json['notes']?.toString(),
       invoiceUrl: json['invoice_file']?.toString(), // Backend uses invoice_file
@@ -111,6 +113,31 @@ class PurchaseOrderModel extends HiveObject {
       isSynced: json['is_synced'] as bool? ?? true,
       localId: json['local_id']?.toString(),
     );
+  }
+
+  // Calculate GST type based on items
+  static String _calculateGSTType(List<PurchaseOrderItemModel> items) {
+    if (items.isEmpty) return 'MIXED';
+    
+    bool hasGST = false;
+    bool hasNonGST = false;
+    
+    for (var item in items) {
+      if (item.gstRate > 0) {
+        hasGST = true;
+      } else {
+        hasNonGST = true;
+      }
+      
+      // If we have both, it's mixed
+      if (hasGST && hasNonGST) {
+        return 'MIXED';
+      }
+    }
+    
+    if (hasGST) return 'GST';
+    if (hasNonGST) return 'NON_GST';
+    return 'MIXED';
   }
 
   static int _parseId(dynamic value) {
@@ -190,8 +217,12 @@ class PurchaseOrderModel extends HiveObject {
     );
   }
 
-  bool get isGST => gstType.toUpperCase() == 'GST';
-  bool get isNonGST => gstType.toUpperCase() == 'NON_GST';
+  bool get isGST => gstType?.toUpperCase() == 'GST';
+  bool get isNonGST => gstType?.toUpperCase() == 'NON_GST';
+  bool get isMixed => gstType?.toUpperCase() == 'MIXED';
+  
+  // Display label for UI
+  String get gstTypeLabel => gstType ?? 'MIXED';
 }
 
 @HiveType(typeId: 11)

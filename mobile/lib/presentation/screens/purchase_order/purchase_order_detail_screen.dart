@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/core/constants/app_constants.dart';
+import 'package:mobile/core/constants/api_constants.dart';
 import 'package:mobile/data/models/purchase_order_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Purchase Order Detail Screen
 /// Shows PO details and allows status updates (approve, deliver, close)
@@ -72,15 +75,13 @@ class _PurchaseOrderDetailScreenState
       return;
     }
 
-    // Show dialog to get invoice type and number
-    final invoiceData = await showDialog<Map<String, String>>(
+    // Show dialog to get invoice number
+    final invoiceNumber = await showDialog<String>(
       context: context,
-      builder: (context) => _InvoiceUploadDialog(
-        gstType: _purchaseOrder?.gstType ?? 'gst',
-      ),
+      builder: (context) => const _InvoiceUploadDialog(),
     );
 
-    if (invoiceData == null) return;
+    if (invoiceNumber == null) return;
 
     setState(() => _isLoading = true);
 
@@ -89,8 +90,7 @@ class _PurchaseOrderDetailScreenState
       await repository.uploadInvoice(
         id: widget.purchaseOrderId,
         invoicePath: file.path!,
-        invoiceType: invoiceData['type']!,
-        invoiceNumber: invoiceData['number']!,
+        invoiceNumber: invoiceNumber,
       );
 
       if (mounted) {
@@ -227,6 +227,46 @@ class _PurchaseOrderDetailScreenState
     );
   }
 
+  Future<void> _viewSystemInvoice() async {
+    if (_purchaseOrder == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final repository = ref.read(purchaseOrderRepositoryProvider);
+      final invoiceData = await repository.getInvoice(_purchaseOrder!.id);
+      
+      setState(() => _isLoading = false);
+      
+      if (invoiceData != null && invoiceData['id'] != null) {
+        final invoiceId = invoiceData['id'];
+        
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => _InvoicePdfViewerScreen(invoiceId: invoiceId),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invoice not yet generated')),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load invoice: $e')),
+        );
+      }
+    }
+  }
+
   Color _getStatusColor() {
     if (_purchaseOrder == null) return Colors.grey;
     
@@ -330,7 +370,7 @@ class _PurchaseOrderDetailScreenState
                       _buildInfoRow('PO Number', po.poNumber),
                       _buildInfoRow('PO Date', _formatDate(po.poDate)),
                       _buildInfoRow('Vendor', po.vendorName ?? 'Vendor #${po.vendorId}'),
-                      _buildInfoRow('GST Type', po.gstType),
+                      _buildInfoRow('GST Type', po.gstTypeLabel),
                     ],
                   ),
                 ),
@@ -385,6 +425,56 @@ class _PurchaseOrderDetailScreenState
                 ),
 
               if (po.invoiceUrl != null && po.invoiceUrl!.isNotEmpty)
+                const SizedBox(height: 16),
+
+              // System Generated Invoice Card (shown after PO is delivered)
+              if (po.status.toUpperCase() == 'DELIVERED' || po.status.toUpperCase() == 'CLOSED')
+                Card(
+                  color: Colors.green[50],
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.description, color: Colors.green[700]),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'System Invoice',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        _buildInfoRow('Type', 'Auto-Generated'),
+                        _buildInfoRow('Status', 'Generated'),
+                        const Text(
+                          'System invoice includes all PO items with GST breakdown',
+                          style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _viewSystemInvoice,
+                            icon: const Icon(Icons.picture_as_pdf),
+                            label: const Text('View Invoice PDF'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[700],
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              if (po.status.toUpperCase() == 'DELIVERED' || po.status.toUpperCase() == 'CLOSED')
                 const SizedBox(height: 16),
 
               // Items Card
@@ -708,9 +798,7 @@ class _PurchaseOrderDetailScreenState
 
 /// Dialog for entering invoice details
 class _InvoiceUploadDialog extends StatefulWidget {
-  final String gstType;
-
-  const _InvoiceUploadDialog({required this.gstType});
+  const _InvoiceUploadDialog();
 
   @override
   State<_InvoiceUploadDialog> createState() => _InvoiceUploadDialogState();
@@ -719,14 +807,6 @@ class _InvoiceUploadDialog extends StatefulWidget {
 class _InvoiceUploadDialogState extends State<_InvoiceUploadDialog> {
   final _formKey = GlobalKey<FormState>();
   final _invoiceNumberController = TextEditingController();
-  late String _selectedType;
-
-  @override
-  void initState() {
-    super.initState();
-    // Normalize to lowercase to match dropdown items
-    _selectedType = widget.gstType.toLowerCase();
-  }
 
   @override
   void dispose() {
@@ -757,29 +837,26 @@ class _InvoiceUploadDialogState extends State<_InvoiceUploadDialog> {
               },
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Invoice Type',
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
               ),
-              items: const [
-                DropdownMenuItem(value: 'gst', child: Text('GST Invoice')),
-                DropdownMenuItem(value: 'non_gst', child: Text('Non-GST Invoice')),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedType = value);
-                }
-              },
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.green[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Supports mixed GST & Non-GST items',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            if (_selectedType != widget.gstType)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Warning: PO type is ${widget.gstType.toUpperCase()}, but you selected $_selectedType',
-                  style: const TextStyle(color: Colors.orange, fontSize: 12),
-                ),
-              ),
           ],
         ),
       ),
@@ -791,15 +868,65 @@ class _InvoiceUploadDialogState extends State<_InvoiceUploadDialog> {
         ElevatedButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              Navigator.pop(context, {
-                'number': _invoiceNumberController.text.trim(),
-                'type': _selectedType,
-              });
+              Navigator.pop(context, _invoiceNumberController.text.trim());
             }
           },
           child: const Text('Upload'),
         ),
       ],
     );
+  }
+}
+
+/// Screen to view system-generated invoice PDF
+class _InvoicePdfViewerScreen extends StatelessWidget {
+  final int invoiceId;
+
+  const _InvoicePdfViewerScreen({required this.invoiceId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('System Invoice'),
+        backgroundColor: Colors.green[700],
+        foregroundColor: Colors.white,
+      ),
+      body: FutureBuilder<String?>(
+        future: _loadToken(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final token = snapshot.data;
+          if (token == null || token.isEmpty) {
+            return const Center(child: Text('Missing auth token. Please log in again.'));
+          }
+
+          final url = '${ApiConstants.baseUrl}/invoices/$invoiceId/view-pdf';
+
+          return SfPdfViewer.network(
+            url,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/pdf',
+            },
+            onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error loading PDF: ${details.error}'),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Future<String?> _loadToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(AppConstants.tokenKey);
   }
 }

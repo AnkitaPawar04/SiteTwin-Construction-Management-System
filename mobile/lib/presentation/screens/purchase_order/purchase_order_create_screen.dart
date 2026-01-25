@@ -31,8 +31,10 @@ class _PurchaseOrderCreateScreenState
   bool _isLoading = false;
   List<VendorModel> _vendors = [];
   VendorModel? _selectedVendor;
-  String _selectedGSTType = AppConstants.productGST;
   DateTime _selectedDate = DateTime.now();
+  
+  // Store material details (id -> material data)
+  final Map<int, Map<String, dynamic>> _materials = {};
   
   // Item pricing - maps material_id to (unit_price, gst_rate)
   final Map<int, Map<String, double>> _itemPricing = {};
@@ -41,7 +43,7 @@ class _PurchaseOrderCreateScreenState
   void initState() {
     super.initState();
     _loadVendors();
-    _initializeItemPricing();
+    _loadMaterialsAndInitializePricing();
   }
 
   @override
@@ -54,9 +56,54 @@ class _PurchaseOrderCreateScreenState
     for (var item in widget.materialRequest.items) {
       _itemPricing[item.materialId] = {
         'unit_price': 0.0,
-        'gst_rate': _selectedGSTType == AppConstants.productGST ? 18.0 : 0.0,
+        'gst_rate': 0.0, // Will be loaded from material data
       };
     }
+  }
+
+  Future<void> _loadMaterialsAndInitializePricing() async {
+    try {
+      // Get unique material IDs from the request
+      final materialIds = widget.materialRequest.items
+          .map((item) => item.materialId)
+          .toSet()
+          .toList();
+
+      // Fetch material details from backend
+      final apiClient = ref.read(apiClientProvider);
+      for (var materialId in materialIds) {
+        try {
+          final response = await apiClient.get('/materials/$materialId');
+          final material = response.data['data'];
+          _materials[materialId] = material;
+          
+          // Initialize pricing with material's GST rate
+          _itemPricing[materialId] = {
+            'unit_price': 0.0,
+            'gst_rate': _parseDouble(material['gst_percentage'] ?? 0.0),
+          };
+        } catch (e) {
+          // If fetch fails, use default 0% GST
+          _itemPricing[materialId] = {
+            'unit_price': 0.0,
+            'gst_rate': 0.0,
+          };
+        }
+      }
+      
+      if (mounted) setState(() {});
+    } catch (e) {
+      // Initialize with defaults if loading fails
+      _initializeItemPricing();
+    }
+  }
+
+  double _parseDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value == null) return 0.0;
+    final parsed = double.tryParse(value.toString());
+    return parsed ?? 0.0;
   }
 
   Future<void> _loadVendors() async {
@@ -111,12 +158,8 @@ class _PurchaseOrderCreateScreenState
   }
 
   List<VendorModel> get _filteredVendors {
-    // Filter vendors based on selected GST type
-    if (_selectedGSTType == AppConstants.productGST) {
-      return _vendors.where((v) => v.isGSTVendor).toList();
-    } else {
-      return _vendors.where((v) => !v.isGSTVendor).toList();
-    }
+    // Return all vendors - mixed GST items are now supported
+    return _vendors;
   }
 
   double _calculateItemTotal(int materialId, int quantity) {
@@ -196,6 +239,24 @@ class _PurchaseOrderCreateScreenState
     );
     
     if (confirm != true) return;
+    
+    // Validate all items have pricing
+    for (var item in widget.materialRequest.items) {
+      if (_itemPricing[item.materialId] == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please wait for materials to load')),
+        );
+        return;
+      }
+      
+      final pricing = _itemPricing[item.materialId]!;
+      if (pricing['unit_price'] == null || pricing['unit_price'] == 0.0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please enter unit price for ${item.materialName ?? 'all materials'}')),
+        );
+        return;
+      }
+    }
     
     setState(() => _isLoading = true);
     
@@ -294,81 +355,19 @@ class _PurchaseOrderCreateScreenState
 
                   const SizedBox(height: 16),
 
-                  // GST Type Selection
+                  // Info Card - Mixed GST Support
                   Card(
+                    color: Colors.green[50],
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          const Text(
-                            'Product Type *',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: RadioListTile<String>(
-                                  title: const Text('GST Products'),
-                                  subtitle: const Text('18% GST applicable'),
-                                  value: AppConstants.productGST,
-                                  groupValue: _selectedGSTType,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedGSTType = value!;
-                                      _selectedVendor = null; // Reset vendor selection
-                                      // Update GST rates
-                                      for (var key in _itemPricing.keys) {
-                                        _itemPricing[key]!['gst_rate'] = 18.0;
-                                      }
-                                    });
-                                  },
-                                  dense: true,
-                                ),
-                              ),
-                              Expanded(
-                                child: RadioListTile<String>(
-                                  title: const Text('Non-GST Products'),
-                                  subtitle: const Text('No GST'),
-                                  value: AppConstants.productNonGST,
-                                  groupValue: _selectedGSTType,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedGSTType = value!;
-                                      _selectedVendor = null; // Reset vendor selection
-                                      // Update GST rates to 0
-                                      for (var key in _itemPricing.keys) {
-                                        _itemPricing[key]!['gst_rate'] = 0.0;
-                                      }
-                                    });
-                                  },
-                                  dense: true,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.orange[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.orange[200]!),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.warning_amber, color: Colors.orange[700], size: 20),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    'GST and Non-GST items cannot be mixed in the same PO',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ],
+                          Icon(Icons.info_outline, color: Colors.green[700], size: 24),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'This PO supports MIXED GST & Non-GST items. GST is calculated per material.',
+                              style: TextStyle(fontSize: 13),
                             ),
                           ),
                         ],
@@ -676,7 +675,24 @@ class _PurchaseOrderCreateScreenState
   }
 
   Widget _buildItemPricingRow(MaterialRequestItemModel item) {
-    final pricing = _itemPricing[item.materialId]!;
+    final pricing = _itemPricing[item.materialId];
+    if (pricing == null) {
+      // Return loading placeholder while materials are being fetched
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    final gstRate = pricing['gst_rate'] ?? 0.0;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -689,12 +705,33 @@ class _PurchaseOrderCreateScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            item.materialName ?? 'Material #${item.materialId}',
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.materialName ?? 'Material #${item.materialId}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: gstRate > 0 ? Colors.blue[50] : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  gstRate > 0 ? '${gstRate.toStringAsFixed(0)}% GST' : 'Non-GST',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: gstRate > 0 ? Colors.blue[700] : Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
@@ -706,8 +743,8 @@ class _PurchaseOrderCreateScreenState
             children: [
               Expanded(
                 child: TextFormField(
-                  initialValue: pricing['unit_price']! > 0 
-                      ? pricing['unit_price']!.toString() 
+                  initialValue: (pricing['unit_price'] ?? 0.0) > 0 
+                      ? pricing['unit_price'].toString() 
                       : '',
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
@@ -748,7 +785,7 @@ class _PurchaseOrderCreateScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'GST: ${pricing['gst_rate']!.toStringAsFixed(0)}%',
+                        'GST: ${(pricing['gst_rate'] ?? 0.0).toStringAsFixed(0)}%',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.blue[700],

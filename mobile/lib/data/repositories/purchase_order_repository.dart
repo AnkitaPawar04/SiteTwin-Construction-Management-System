@@ -55,12 +55,10 @@ class PurchaseOrderRepository {
   Future<PurchaseOrderModel> uploadInvoice({
     required int id,
     required String invoicePath,
-    required String invoiceType,
     required String invoiceNumber,
   }) async {
     final formData = FormData.fromMap({
       'invoice': await MultipartFile.fromFile(invoicePath),
-      'invoice_type': invoiceType,
       'invoice_number': invoiceNumber,
     });
     final response = await _apiClient.postFormData('/purchase-orders/$id/invoice', formData);
@@ -69,5 +67,14 @@ class PurchaseOrderRepository {
 
   Future<void> deletePurchaseOrder(int id) async {
     await _apiClient.delete('/purchase-orders/$id');
+  }
+
+  Future<Map<String, dynamic>?> getInvoice(int id) async {
+    try {
+      final response = await _apiClient.get('/purchase-orders/$id/invoice');
+      return response.data['data'] as Map<String, dynamic>?;
+    } catch (e) {
+      return null;
+    }
   }
 }

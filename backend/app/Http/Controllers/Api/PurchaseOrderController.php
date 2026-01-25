@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
 use App\Models\MaterialRequest;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -137,7 +139,7 @@ class PurchaseOrderController extends Controller
 
             $grandTotal = $totalAmount + $totalGstAmount;
 
-            // Create purchase order
+            // Create purchase order (supports mixed GST & Non-GST items)
             $purchaseOrder = PurchaseOrder::create([
                 'po_number' => $poNumber,
                 'project_id' => $validated['project_id'],
@@ -145,7 +147,6 @@ class PurchaseOrderController extends Controller
                 'material_request_id' => $validated['material_request_id'] ?? null,
                 'created_by' => auth()->id(),
                 'status' => PurchaseOrder::STATUS_CREATED,
-                'type' => $poType,
                 'total_amount' => $totalAmount,
                 'gst_amount' => $totalGstAmount,
                 'grand_total' => $grandTotal,
@@ -179,7 +180,7 @@ class PurchaseOrderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Purchase Order created successfully as {$poType} type",
+                'message' => 'Purchase Order created successfully (supports mixed GST & Non-GST items)',
                 'data' => $purchaseOrder->load(['project', 'vendor', 'items.material'])
             ], 201);
 
@@ -236,6 +237,11 @@ class PurchaseOrderController extends Controller
                 }
             } elseif ($validated['status'] === PurchaseOrder::STATUS_DELIVERED) {
                 $purchaseOrder->delivered_at = now();
+                
+                // Auto-generate system invoice
+                if (!$purchaseOrder->invoice) {
+                    $this->generateInvoiceFromPO($purchaseOrder);
+                }
             } elseif ($validated['status'] === PurchaseOrder::STATUS_CLOSED) {
                 $purchaseOrder->closed_at = now();
             }
@@ -268,20 +274,11 @@ class PurchaseOrderController extends Controller
 
         $validated = $request->validate([
             'invoice' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB max
-            'invoice_type' => 'required|in:gst,non_gst',
-            'invoice_number' => 'required|string|max:100', // PHASE 3: Invoice number for stock tracking
+            'invoice_number' => 'required|string|max:100', // Invoice number for stock tracking
         ]);
 
         try {
             DB::beginTransaction();
-
-            // PHASE 2: Validate invoice type matches PO type
-            if ($validated['invoice_type'] !== $purchaseOrder->type) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Invoice type mismatch. This is a {$purchaseOrder->type} Purchase Order, but you provided a {$validated['invoice_type']} invoice. GST invoices are required for GST POs, and Non-GST invoices for Non-GST POs."
-                ], 422);
-            }
 
             // Delete old invoice if exists
             if ($purchaseOrder->invoice_file) {
@@ -292,7 +289,6 @@ class PurchaseOrderController extends Controller
             $path = $request->file('invoice')->store('purchase_orders/invoices', 'public');
             
             $purchaseOrder->invoice_file = $path;
-            $purchaseOrder->invoice_type = $validated['invoice_type'];
             $purchaseOrder->invoice_number = $validated['invoice_number'];
             $purchaseOrder->save();
 
@@ -368,5 +364,59 @@ class PurchaseOrderController extends Controller
                 'message' => 'Failed to delete purchase order: ' . $e->getMessage()
             ], 422);
         }
+    }
+
+    /**
+     * Get invoice for a Purchase Order
+     */
+    public function getInvoice($id)
+    {
+        $purchaseOrder = PurchaseOrder::with(['invoice.items.material'])->findOrFail($id);
+        $this->authorize('view', $purchaseOrder);
+
+        if (!$purchaseOrder->invoice) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invoice not yet generated. Invoice will be created when PO is delivered.'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $purchaseOrder->invoice
+        ]);
+    }
+
+    /**
+     * Generate system invoice from Purchase Order
+     */
+    private function generateInvoiceFromPO(PurchaseOrder $purchaseOrder)
+    {
+        // Create invoice
+        $invoice = Invoice::create([
+            'project_id' => $purchaseOrder->project_id,
+            'purchase_order_id' => $purchaseOrder->id,
+            'invoice_number' => $purchaseOrder->invoice_number ?? 'INV-' . $purchaseOrder->po_number,
+            'total_amount' => $purchaseOrder->grand_total,
+            'gst_amount' => $purchaseOrder->gst_amount,
+            'status' => Invoice::STATUS_GENERATED,
+        ]);
+
+        // Create invoice items from PO items
+        foreach ($purchaseOrder->items as $item) {
+            \App\Models\InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'material_id' => $item->material_id,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit,
+                'rate' => $item->rate,
+                'amount' => $item->amount,
+                'gst_percentage' => $item->gst_percentage,
+                'gst_amount' => $item->gst_amount,
+                'total_amount' => $item->total_amount,
+            ]);
+        }
+
+        return $invoice;
     }
 }

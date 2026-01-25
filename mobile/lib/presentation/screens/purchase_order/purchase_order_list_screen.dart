@@ -322,7 +322,7 @@ class _POCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      purchaseOrder.gstType,
+                      purchaseOrder.gstTypeLabel,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,

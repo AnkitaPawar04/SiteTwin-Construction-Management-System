@@ -30,6 +30,9 @@ class DatabaseSeeder extends Seeder
             InvoiceSeeder::class,
             NotificationSeeder::class,
             ContractorSeeder::class,
+            FlatCostingDataSeeder::class,
+            ConsumptionVarianceSeeder::class,
+            ComprehensiveDataSeeder::class, // New comprehensive seeder
         ]);
 
         $this->command->newLine();

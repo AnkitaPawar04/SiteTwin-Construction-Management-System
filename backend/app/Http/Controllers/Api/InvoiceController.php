@@ -89,7 +89,7 @@ class InvoiceController extends Controller
     public function generatePdf($id)
     {
         try {
-            $invoice = Invoice::with(['project', 'items'])->findOrFail($id);
+            $invoice = Invoice::with(['project', 'items.material', 'items.task', 'purchaseOrder'])->findOrFail($id);
 
             // Create PDF content
             $html = view('invoices.pdf', compact('invoice'))->render();
@@ -118,7 +118,7 @@ class InvoiceController extends Controller
     public function viewPdf($id)
     {
         try {
-            $invoice = Invoice::with(['project', 'items'])->findOrFail($id);
+            $invoice = Invoice::with(['project', 'items.material', 'items.task', 'purchaseOrder'])->findOrFail($id);
 
             // Create PDF content
             $html = view('invoices.pdf', compact('invoice'))->render();
