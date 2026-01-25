@@ -132,6 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/costing/project/{projectId}/variance', [CostingController::class, 'getVarianceReport']);
     Route::get('/costing/project/{projectId}/material/{materialId}/variance', [CostingController::class, 'getMaterialVariance']);
     Route::get('/costing/project/{projectId}/flat-costing', [CostingController::class, 'getFlatCosting']);
+    Route::get('/costing/project/{projectId}/units-list', [CostingController::class, 'getUnitsList']);
     Route::get('/costing/project/{projectId}/area-costing', [CostingController::class, 'getAreaBasedCosting']);
     Route::get('/costing/project/{projectId}/wastage-alerts', [CostingController::class, 'getWastageAlerts']);
     Route::get('/costing/project/{projectId}/unit-costing', [CostingController::class, 'getUnitWiseCosting']);

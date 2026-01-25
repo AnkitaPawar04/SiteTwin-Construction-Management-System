@@ -105,6 +105,28 @@ class CostingController extends Controller
     }
 
     /**
+     * Get list of project units (flats) - sold/unsold
+     */
+    public function getUnitsList(Request $request, $projectId)
+    {
+        try {
+            $status = $request->query('status'); // 'sold', 'unsold', or null for all
+            $units = $this->costingService->getProjectUnitsList($projectId, $status);
+
+            return response()->json([
+                'success' => true,
+                'data' => $units,
+                'count' => count($units)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get units list: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get area-based costing (cost per sqft/sqm)
      */
     public function getAreaBasedCosting(Request $request, $projectId)

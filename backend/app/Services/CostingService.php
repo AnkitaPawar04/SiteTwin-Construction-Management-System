@@ -211,6 +211,39 @@ class CostingService
     }
 
     /**
+     * Get list of project units (flats) with sold/unsold status
+     * 
+     * @param int $projectId
+     * @param string|null $status 'sold' or 'unsold', null for all
+     * @return array
+     */
+    public function getProjectUnitsList(int $projectId, ?string $status = null): array
+    {
+        $query = ProjectUnit::where('project_id', $projectId);
+
+        if ($status === 'sold') {
+            $query->where('is_sold', true);
+        } elseif ($status === 'unsold') {
+            $query->where('is_sold', false);
+        }
+
+        $units = $query->orderBy('unit_number')->get();
+
+        return $units->map(function ($unit) {
+            return [
+                'unit_id' => $unit->id,
+                'unit_number' => $unit->unit_number,
+                'unit_type' => $unit->unit_type,
+                'floor_area' => $unit->floor_area,
+                'is_sold' => $unit->is_sold,
+                'sold_price' => $unit->sold_price,
+                'sold_date' => $unit->sold_date?->format('Y-m-d'),
+                'buyer_name' => $unit->buyer_name,
+            ];
+        })->toArray();
+    }
+
+    /**
      * Calculate area-based costing (cost per square foot/meter).
      * 
      * @param int $projectId

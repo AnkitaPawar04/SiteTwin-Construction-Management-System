@@ -183,6 +183,18 @@ class _FlatCostingScreenState extends ConsumerState<FlatCostingScreen> {
     );
   }
 
+  Future<void> _showUnitsList(String status) async {
+    if (_selectedProjectId == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => _UnitsListDialog(
+        projectId: _selectedProjectId!,
+        status: status,
+      ),
+    );
+  }
+
   Widget _buildProjectSelector() {
     if (_projects.isEmpty) {
       return const SizedBox.shrink();
@@ -482,52 +494,63 @@ class _FlatCostingScreenState extends ConsumerState<FlatCostingScreen> {
                 color: Colors.green[50],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.green[700]),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Sold Flats',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+              child: InkWell(
+                onTap: () => _showUnitsList('sold'),
+                borderRadius: BorderRadius.circular(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.green[700]),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Sold Flats',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '$soldFlats / $totalFlats',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                          ],
                         ),
+                        Row(
+                          children: [
+                            Text(
+                              '$soldFlats / $totalFlats',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_ios, 
+                                size: 16, color: Colors.grey[600]),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Cost Allocated',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Cost Allocated',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _currencyFormat.format(costAllocatedSold),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green[900],
+                    const SizedBox(height: 4),
+                    Text(
+                      _currencyFormat.format(costAllocatedSold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[900],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -540,52 +563,63 @@ class _FlatCostingScreenState extends ConsumerState<FlatCostingScreen> {
                 color: Colors.orange[50],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.inventory_2, color: Colors.orange[700]),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Unsold Flats',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+              child: InkWell(
+                onTap: () => _showUnitsList('unsold'),
+                borderRadius: BorderRadius.circular(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.inventory_2, color: Colors.orange[700]),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Unsold Flats',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '$unsoldFlats / $totalFlats',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                          ],
                         ),
+                        Row(
+                          children: [
+                            Text(
+                              '$unsoldFlats / $totalFlats',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_ios, 
+                                size: 16, color: Colors.grey[600]),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Inventory Value',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Inventory Value',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _currencyFormat.format(inventoryValueUnsold),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange[900],
+                    const SizedBox(height: 4),
+                    Text(
+                      _currencyFormat.format(inventoryValueUnsold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[900],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -629,6 +663,321 @@ class _FlatCostingScreenState extends ConsumerState<FlatCostingScreen> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Dialog to show units list
+class _UnitsListDialog extends ConsumerStatefulWidget {
+  final int projectId;
+  final String status;
+
+  const _UnitsListDialog({
+    required this.projectId,
+    required this.status,
+  });
+
+  @override
+  ConsumerState<_UnitsListDialog> createState() => _UnitsListDialogState();
+}
+
+class _UnitsListDialogState extends ConsumerState<_UnitsListDialog> {
+  List<Map<String, dynamic>>? _units;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnits();
+  }
+
+  Future<void> _loadUnits() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final repository = ref.read(costingRepositoryProvider);
+      final units = await repository.getUnitsList(widget.projectId, status: widget.status);
+      
+      setState(() {
+        _units = units;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: widget.status == 'sold' ? Colors.green[50] : Colors.orange[50],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.status == 'sold' ? Icons.check_circle : Icons.inventory_2,
+                    color: widget.status == 'sold' ? Colors.green[700] : Colors.orange[700],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.status == 'sold' ? 'Sold Flats' : 'Unsold Flats',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (_units != null)
+                          Text(
+                            '${_units!.length} units',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: _buildContent(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading units',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadUnits,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_units == null || _units!.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.home_work_outlined,
+                size: 64,
+                color: Colors.grey[300],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No ${widget.status} flats found',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _units!.length,
+      itemBuilder: (context, index) {
+        final unit = _units![index];
+        return _buildUnitCard(unit);
+      },
+    );
+  }
+
+  Widget _buildUnitCard(Map<String, dynamic> unit) {
+    final unitNumber = unit['unit_number'] ?? 'N/A';
+    final unitType = unit['unit_type'] ?? 'N/A';
+    final floorArea = unit['floor_area'];
+    final isSold = unit['is_sold'] == true || unit['is_sold'] == 1;
+    final buyerName = unit['buyer_name'];
+    final salePrice = unit['sale_price'];
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Unit Number and Type
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSold ? Colors.green[100] : Colors.orange[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    unitNumber,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isSold ? Colors.green[900] : Colors.orange[900],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  unitType,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Floor Area
+            if (floorArea != null)
+              Row(
+                children: [
+                  Icon(Icons.straighten, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Area: ${floorArea.toString()} sq ft',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+
+            // Buyer Name (for sold units)
+            if (isSold && buyerName != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Buyer: $buyerName',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // Sale Price (for sold units)
+            if (isSold && salePrice != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.currency_rupee, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Sale Price: ${NumberFormat.currency(
+                      locale: 'en_IN',
+                      symbol: '₹',
+                      decimalDigits: 0,
+                    ).format(salePrice)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
