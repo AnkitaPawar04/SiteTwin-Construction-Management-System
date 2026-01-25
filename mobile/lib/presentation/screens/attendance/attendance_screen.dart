@@ -8,6 +8,7 @@ import 'package:mobile/data/models/project_model.dart';
 import 'package:mobile/providers/providers.dart';
 import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/services/location_service.dart';
+import 'package:mobile/presentation/screens/attendance/face_attendance_camera_screen.dart';
 
 final projectsProvider = FutureProvider.autoDispose<List<ProjectModel>>((ref) async {
   final repo = ref.watch(dprRepositoryProvider);
@@ -50,6 +51,62 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
   
   Future<void> _handleCheckIn() async {
+    final authState = ref.read(authStateProvider);
+    final user = authState.value;
+    
+    // Only workers and engineers can check in
+    if (user?.role != 'worker' && user?.role != 'engineer') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only Workers and Engineers can mark attendance'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (_selectedProjectId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a project first'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Navigate to face camera screen
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FaceAttendanceCameraScreen(
+          isCheckIn: true,
+          projectId: _selectedProjectId!,
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      // Force refresh attendance data
+      ref.invalidate(todayAttendanceProvider(_selectedProjectId));
+      ref.invalidate(projectsProvider);
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Check-in successful! Refreshing attendance...'),
+          backgroundColor: AppTheme.successColor,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+  
+  Future<void> _handleCheckInLegacy() async {
     final authState = ref.read(authStateProvider);
     final user = authState.value;
     
@@ -161,6 +218,62 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
   
   Future<void> _handleCheckOut() async {
+    final authState = ref.read(authStateProvider);
+    final user = authState.value;
+    
+    // Only workers and engineers can check out
+    if (user?.role != 'worker' && user?.role != 'engineer') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only Workers and Engineers can mark attendance'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (_selectedProjectId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a project first'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Navigate to face camera screen
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FaceAttendanceCameraScreen(
+          isCheckIn: false,
+          projectId: _selectedProjectId!,
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      // Force refresh attendance data
+      ref.invalidate(todayAttendanceProvider(_selectedProjectId));
+      ref.invalidate(projectsProvider);
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Check-out successful! Refreshing attendance...'),
+          backgroundColor: AppTheme.successColor,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+  
+  Future<void> _handleCheckOutLegacy() async {
     final authState = ref.read(authStateProvider);
     final user = authState.value;
     

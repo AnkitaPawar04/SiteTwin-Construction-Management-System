@@ -152,4 +152,99 @@ class AttendanceController extends Controller
             ], 422);
         }
     }
+    
+    public function checkInWithFace(Request $request)
+    {
+        try {
+            $request->validate([
+                'project_id' => 'required|exists:projects,id',
+                'face_image' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+                'latitude' => 'required|numeric',
+                'longitude' => 'required|numeric',
+            ]);
+
+            // Store the face image
+            if ($request->hasFile('face_image')) {
+                $faceImage = $request->file('face_image');
+                $filename = 'face_' . $request->user()->id . '_' . time() . '.' . $faceImage->getClientOriginalExtension();
+                $path = $faceImage->storeAs('attendance/faces', $filename, 'public');
+            } else {
+                throw new \Exception('Face image is required');
+            }
+
+            // Create attendance record using the service
+            $attendance = $this->attendanceService->checkIn(
+                $request->user()->id,
+                $request->project_id,
+                $request->latitude,
+                $request->longitude,
+                'storage/' . $path
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Check-in successful with face verification',
+                'data' => $attendance
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    public function checkOutWithFace(Request $request)
+    {
+        try {
+            $request->validate([
+                'project_id' => 'required|exists:projects,id',
+                'face_image' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+                'latitude' => 'required|numeric',
+                'longitude' => 'required|numeric',
+            ]);
+
+            // Get today's attendance record for this user and project
+            $today = now()->format('Y-m-d');
+            $attendance = \App\Models\Attendance::where('user_id', $request->user()->id)
+                ->where('project_id', $request->project_id)
+                ->whereDate('date', $today)
+                ->first();
+
+            if (!$attendance) {
+                throw new \Exception('No check-in found for today. Please check in first.');
+            }
+
+            if ($attendance->check_out) {
+                throw new \Exception('Already checked out today.');
+            }
+
+            // Store the checkout face image
+            if ($request->hasFile('face_image')) {
+                $faceImage = $request->file('face_image');
+                $filename = 'face_checkout_' . $request->user()->id . '_' . time() . '.' . $faceImage->getClientOriginalExtension();
+                $path = $faceImage->storeAs('attendance/faces', $filename, 'public');
+                
+                // Store path in a custom field if needed (for now, just storing the image)
+            }
+
+            // Perform checkout
+            $attendance = $this->attendanceService->checkOut(
+                $attendance->id,
+                $request->latitude,
+                $request->longitude
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Check-out successful with face verification',
+                'data' => $attendance
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
 }

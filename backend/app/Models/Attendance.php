@@ -23,6 +23,7 @@ class Attendance extends Model
         'distance_from_geofence',
         'is_within_geofence',
         'is_verified',
+        'face_image_path',
     ];
 
     protected function casts(): array

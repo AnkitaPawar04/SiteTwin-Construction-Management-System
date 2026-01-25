@@ -352,4 +352,70 @@ class AttendanceRepository {
       rethrow;
     }
   }
+
+  /// Check-in with face verification
+  Future<void> checkInWithFace({
+    required int projectId,
+    required String facePath,
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'project_id': projectId,
+        'face_image': await MultipartFile.fromFile(facePath),
+        'latitude': latitude,
+        'longitude': longitude,
+        'check_in_time': DateTime.now().toIso8601String(),
+      });
+
+      final response = await _apiClient.postFormData(
+        '/attendance/check-in-face',
+        formData,
+      );
+
+      if (!response.data['success']) {
+        throw Exception(response.data['message'] ?? 'Failed to check in');
+      }
+
+      AppLogger.info('Check-in with face verification successful');
+    } on DioException catch (e) {
+      AppLogger.error('Face check-in failed', e);
+      final message = e.response?.data['message'] ?? 'Failed to check in with face';
+      throw Exception(message);
+    }
+  }
+
+  /// Check-out with face verification
+  Future<void> checkOutWithFace({
+    required int projectId,
+    required String facePath,
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'project_id': projectId,
+        'face_image': await MultipartFile.fromFile(facePath),
+        'latitude': latitude,
+        'longitude': longitude,
+        'check_out_time': DateTime.now().toIso8601String(),
+      });
+
+      final response = await _apiClient.postFormData(
+        '/attendance/check-out-face',
+        formData,
+      );
+
+      if (!response.data['success']) {
+        throw Exception(response.data['message'] ?? 'Failed to check out');
+      }
+
+      AppLogger.info('Check-out with face verification successful');
+    } on DioException catch (e) {
+      AppLogger.error('Face check-out failed', e);
+      final message = e.response?.data['message'] ?? 'Failed to check out with face';
+      throw Exception(message);
+    }
+  }
 }

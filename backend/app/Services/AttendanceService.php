@@ -16,7 +16,7 @@ class AttendanceService
         $this->geofenceService = new GeofenceService();
     }
 
-    public function checkIn($userId, $projectId, $latitude, $longitude)
+    public function checkIn($userId, $projectId, $latitude, $longitude, $faceImagePath = null)
     {
         $today = Carbon::today()->toDateString();
         
@@ -52,7 +52,7 @@ class AttendanceService
             }
         }
 
-        $attendance = Attendance::create([
+        $attendanceData = [
             'user_id' => $userId,
             'project_id' => $projectId,
             'date' => $today,
@@ -62,7 +62,14 @@ class AttendanceService
             'distance_from_geofence' => isset($geofenceCheck) ? (int)round($geofenceCheck['distance']) : null,
             'is_within_geofence' => isset($geofenceCheck) ? $geofenceCheck['is_within'] : true,
             'is_verified' => true,
-        ]);
+        ];
+        
+        // Add face image path if provided
+        if ($faceImagePath) {
+            $attendanceData['face_image_path'] = $faceImagePath;
+        }
+
+        $attendance = Attendance::create($attendanceData);
 
         return $attendance;
     }
